@@ -1,14 +1,34 @@
-function placeStone(boardData, x, y, color) {
+function canPlace(boardData, x, y, color) {
   if (boardData[x][y] !== EMPTY) return false;
 
-  boardData[x][y] = color; // 石を置く
-  const flipped = flipStones(boardData, x, y, color); // 石を返す
+  const opponent = color === BLACK ? WHITE : BLACK;
+  const direction = [
+    [0, 1], // 右
+    [0, -1], // 左
+    [1, 0], // 下
+    [-1, 0], // 上
+    [1, 1], // 右下
+    [1, -1], // 左下
+    [-1, 1], // 右上
+    [-1, -1], // 左上
+  ];
 
-  if (!flipped) {
-    boardData[x][y] = EMPTY;
-    return false;
+  for (const [dx, dy] of direction) {
+    let nx = x + dx;
+    let ny = y + dy;
+    let foundOpponent = false;
+
+    while (nx >= 0 && nx < 8 && ny >= 0 && ny < 8 && boardData[nx][ny] === opponent) {
+      foundOpponent = true;
+      nx += dx;
+      ny += dy;
+    }
+    if (foundOpponent && nx >= 0 && nx < 8 && ny >= 0 && ny < 8 && boardData[nx][ny] === color) {
+      return true;
+    }
   }
-  return true;
+
+  return false;
 }
 
 function flipStones(boardData, x, y, color) {
@@ -23,8 +43,6 @@ function flipStones(boardData, x, y, color) {
     [-1, 1], // 右上
     [-1, -1], // 左上
   ];
-
-  let flipped = false;
 
   for (const [dx, dy] of direction) {
     const stonesToFlips = []; // 記録するための配列の定義
@@ -44,9 +62,22 @@ function flipStones(boardData, x, y, color) {
       for (const [fx, fy] of stonesToFlips) {
         boardData[fx][fy] = color;
       }
-      if (stonesToFlips.length > 0) flipped = true;
     }
   }
 
-  return flipped;
+  return true;
+}
+
+function placeStone(boardData, x, y, color) {
+  if (boardData[x][y] !== EMPTY) return false;
+  if (!canPlace(boardData, x, y, color)) return false;
+
+  boardData[x][y] = color; // 石を置く
+  const flipped = flipStones(boardData, x, y, color); // 石を返す
+
+  if (!flipped) {
+    boardData[x][y] = EMPTY;
+    return false;
+  }
+  return true;
 }
