@@ -44,8 +44,6 @@ function flipStones(boardData, x, y, color) {
     [-1, -1], // 左上
   ];
 
-  let flipped = false;
-
   for (const [dx, dy] of direction) {
     const stonesToFlips = []; // 記録するための配列の定義
 
@@ -64,11 +62,10 @@ function flipStones(boardData, x, y, color) {
       for (const [fx, fy] of stonesToFlips) {
         boardData[fx][fy] = color;
       }
-      if (stonesToFlips.length > 0) flipped = true;
     }
   }
 
-  return flipped;
+  return true;
 }
 
 function placeStone(boardData, x, y, color) {

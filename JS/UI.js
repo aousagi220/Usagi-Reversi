@@ -1,4 +1,4 @@
-function renderBoard(boardData) {
+function renderBoard(boardData, currentPlayer) {
   const boardDiv = document.getElementById("board");
   boardDiv.innerHTML = "";
 
@@ -17,7 +17,7 @@ function renderBoard(boardData) {
         cellDiv.classList.add("white");
       }
 
-      if (canPlace(boardData, x, y, PLAYER)) {
+      if (canPlace(boardData, x, y, currentPlayer)) {
         cellDiv.classList.add("highlight");
       }
 
