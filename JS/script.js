@@ -9,15 +9,16 @@ const board = Array(8)
 
 startGame(board);
 
-document.getElementById('board').addEventListener('click', (e) => {
-  if (!e.target.classList.contains('cell')) return;
+document.getElementById("board").addEventListener("click", (e) => {
+  if (!e.target.classList.contains("cell")) return;
 
   const x = parseInt(e.target.dataset.x);
   const y = parseInt(e.target.dataset.y);
 
-  if (placeStone(board, x, y, PLAYER)){
-    renderBoard(board)
-    console.log('正常に動作しました！')
-    console.log(printBoard(board))
+  if (placeStone(board, x, y, PLAYER)) {
+    renderBoard(board);
+    PLAYER = PLAYER === BLACK ? WHITE : BLACK;
+    console.log("正常に動作しました！");
+    printBoard(board);
   }
 });

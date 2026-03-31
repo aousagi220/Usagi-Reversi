@@ -20,6 +20,6 @@ function startGame(boardData) {
   boardData[4][3] = BLACK;
   boardData[4][4] = WHITE;
 
-  renderBoard(boardData)
+  renderBoard(boardData);
   PLAYER = BLACK;
 }
