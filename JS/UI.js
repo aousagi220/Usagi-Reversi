@@ -16,6 +16,11 @@ function renderBoard(boardData) {
         cellDiv.textContent = "●";
         cellDiv.classList.add("white");
       }
+
+      if (canPlace(boardData, x, y, PLAYER)) {
+        cellDiv.classList.add("highlight");
+      }
+
       boardDiv.appendChild(cellDiv);
     }
   }

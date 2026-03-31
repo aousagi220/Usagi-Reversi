@@ -38,3 +38,6 @@ header {
 .white {
   color: white;
 }
+.highlight {
+  background-color: lightgreen;
+}

@@ -7,7 +7,13 @@ const board = Array(8)
   .fill()
   .map(() => Array(8).fill(0));
 
-startGame(board);
+function resetGame() {
+  PLAYER = BLACK;
+  startGame(board);
+  renderBoard(board);
+}
+
+resetGame()
 
 document.getElementById("board").addEventListener("click", (e) => {
   if (!e.target.classList.contains("cell")) return;
@@ -16,8 +22,8 @@ document.getElementById("board").addEventListener("click", (e) => {
   const y = parseInt(e.target.dataset.y);
 
   if (placeStone(board, x, y, PLAYER)) {
-    renderBoard(board);
     PLAYER = PLAYER === BLACK ? WHITE : BLACK;
+    renderBoard(board);
     console.log("正常に動作しました！");
     printBoard(board);
   }
