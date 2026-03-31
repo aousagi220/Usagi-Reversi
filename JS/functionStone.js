@@ -9,6 +9,8 @@ function placeStone(boardData, x, y, color) {
     return false;
   }
 
+  renderBoard(boardData);
+  PLAYER === BLACK ? PLAYER = WHITE : PLAYER = BLACK;
   return true;
 }
 

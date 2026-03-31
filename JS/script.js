@@ -1,19 +1,23 @@
 const EMPTY = 0; // no stone
 const BLACK = 1; // player 1
 const WHITE = 2; // player 2
+let PLAYER = 0;
 
 const board = Array(8)
   .fill()
   .map(() => Array(8).fill(0));
 
 startGame(board);
-printBoard(board);
 
-placeStone(board, 3, 2, BLACK);
-printBoard(board);
+document.getElementById('board').addEventListener('click', (e) => {
+  if (!e.target.classList.contains('cell')) return;
 
-placeStone(board, 4, 2, WHITE);
-printBoard(board);
+  const x = parseInt(e.target.dataset.x);
+  const y = parseInt(e.target.dataset.y);
 
-placeStone(board, 5, 2, BLACK);
-printBoard(board);
+  if (placeStone(board, x, y, PLAYER)){
+    renderBoard(board)
+    console.log('正常に動作しました！')
+    console.log(printBoard(board))
+  }
+});
