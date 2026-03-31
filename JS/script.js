@@ -13,7 +13,7 @@ function resetGame() {
   renderBoard(board);
 }
 
-resetGame()
+resetGame();
 
 document.getElementById("board").addEventListener("click", (e) => {
   if (!e.target.classList.contains("cell")) return;
@@ -23,6 +23,10 @@ document.getElementById("board").addEventListener("click", (e) => {
 
   if (placeStone(board, x, y, PLAYER)) {
     PLAYER = PLAYER === BLACK ? WHITE : BLACK;
+    if (!hasValidMove(board, PLAYER)) {
+      PLAYER = PLAYER === BLACK ? WHITE : BLACK;
+      console.log("パスされました！");
+    }
     renderBoard(board);
     console.log("正常に動作しました！");
   }

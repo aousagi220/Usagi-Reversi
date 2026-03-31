@@ -81,3 +81,13 @@ function placeStone(boardData, x, y, color) {
   }
   return true;
 }
+
+function hasValidMove(boardData, color) {
+  for (let x = 0; x < 8; x++) {
+    for (let y = 0; y < 8; y++) {
+      if (canPlace(boardData, x, y, color)) return true;
+    }
+  }
+
+  return false;
+}
