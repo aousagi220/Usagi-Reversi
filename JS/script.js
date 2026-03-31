@@ -10,10 +10,10 @@ const board = Array(8)
 function resetGame() {
   PLAYER = BLACK;
   startGame(board);
-  renderBoard(board);
+  renderBoard(board, PLAYER);
 }
 
-resetGame()
+resetGame();
 
 document.getElementById("board").addEventListener("click", (e) => {
   if (!e.target.classList.contains("cell")) return;
@@ -23,7 +23,11 @@ document.getElementById("board").addEventListener("click", (e) => {
 
   if (placeStone(board, x, y, PLAYER)) {
     PLAYER = PLAYER === BLACK ? WHITE : BLACK;
-    renderBoard(board);
+    if (!hasValidMove(board, PLAYER)) {
+      PLAYER = PLAYER === BLACK ? WHITE : BLACK;
+      console.log("パスされました！");
+    }
+    renderBoard(board, PLAYER);
     console.log("正常に動作しました！");
   }
 });

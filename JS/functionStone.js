@@ -73,11 +73,17 @@ function placeStone(boardData, x, y, color) {
   if (!canPlace(boardData, x, y, color)) return false;
 
   boardData[x][y] = color; // 石を置く
-  const flipped = flipStones(boardData, x, y, color); // 石を返す
+  flipStones(boardData, x, y, color); // 石を返す
 
-  if (!flipped) {
-    boardData[x][y] = EMPTY;
-    return false;
-  }
   return true;
+}
+
+function hasValidMove(boardData, color) {
+  for (let x = 0; x < 8; x++) {
+    for (let y = 0; y < 8; y++) {
+      if (canPlace(boardData, x, y, color)) return true;
+    }
+  }
+
+  return false;
 }
