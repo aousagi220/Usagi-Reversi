@@ -34,6 +34,7 @@ document.getElementById("board").addEventListener("click", (e) => {
 
   if (placeStone(board, x, y, PLAYER)) {
     PLAYER = PLAYER === BLACK ? WHITE : BLACK;
+    renderBoard(board, PLAYER);
     if (!hasValidMove(board, PLAYER)) {
       if (isGameEnd(board)) {
         console.log("双方置けなくなりました！");
@@ -44,7 +45,5 @@ document.getElementById("board").addEventListener("click", (e) => {
         console.log("パスされました！");
       }
     }
-    renderBoard(board, PLAYER);
-    console.log("正常に動作しました！");
   }
 });
