@@ -42,6 +42,7 @@ document.getElementById("board").addEventListener("click", (e) => {
         return;
       } else {
         PLAYER = PLAYER === BLACK ? WHITE : BLACK;
+        renderBoard(board, PLAYER);
         console.log("パスされました！");
       }
     }
