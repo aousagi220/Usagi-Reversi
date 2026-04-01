@@ -14,9 +14,9 @@ function printBoard(boardData) {
   console.log(displayBoard);
 }
 
-function startGame(boardData) {
-  for (let x = 0; x < 8; x++ ){
-    for (let y = 0; y < 8; y++ ){
+function boardReset(boardData) {
+  for (let x = 0; x < 8; x++) {
+    for (let y = 0; y < 8; y++) {
       boardData[x][y] = EMPTY;
     }
   }

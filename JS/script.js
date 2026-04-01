@@ -9,11 +9,22 @@ const board = Array(8)
 
 function resetGame() {
   PLAYER = BLACK;
-  startGame(board);
-  renderBoard(board);
+  boardReset(board);
+  renderBoard(board, PLAYER);
 }
 
-resetGame()
+function gameEnd() {
+  const result = countStone(board);
+  if (result.black > result.white) {
+    console.log("黒の勝ち！");
+  } else if (result.black < result.white) {
+    console.log("白の勝ち！");
+  } else {
+    console.log("引き分け！");
+  }
+}
+
+resetGame();
 
 document.getElementById("board").addEventListener("click", (e) => {
   if (!e.target.classList.contains("cell")) return;
@@ -23,7 +34,17 @@ document.getElementById("board").addEventListener("click", (e) => {
 
   if (placeStone(board, x, y, PLAYER)) {
     PLAYER = PLAYER === BLACK ? WHITE : BLACK;
-    renderBoard(board);
+    if (!hasValidMove(board, PLAYER)) {
+      if (isGameEnd(board)) {
+        console.log("双方置けなくなりました！");
+        gameEnd();
+        return;
+      } else {
+        PLAYER = PLAYER === BLACK ? WHITE : BLACK;
+        console.log("パスされました！");
+      }
+    }
+    renderBoard(board, PLAYER);
     console.log("正常に動作しました！");
   }
 });
