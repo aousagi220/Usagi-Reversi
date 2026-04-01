@@ -104,3 +104,11 @@ function countStone(boardData) {
 
   return { black: countBlack, white: countWhite };
 }
+
+function isGameEnd(boardData) {
+  if (!hasValidMove(boardData, BLACK) && !hasValidMove(boardData, WHITE)) {
+    return true;
+  }
+
+  return false;
+}

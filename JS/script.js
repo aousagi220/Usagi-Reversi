@@ -13,6 +13,17 @@ function resetGame() {
   renderBoard(board, PLAYER);
 }
 
+function gameEnd() {
+  const result = countStone(board);
+  if (result.black > result.white) {
+    console.log("黒の勝ち！");
+  } else if (result.black < result.white) {
+    console.log("白の勝ち！");
+  } else {
+    console.log("引き分け！");
+  }
+}
+
 resetGame();
 
 document.getElementById("board").addEventListener("click", (e) => {
@@ -24,8 +35,14 @@ document.getElementById("board").addEventListener("click", (e) => {
   if (placeStone(board, x, y, PLAYER)) {
     PLAYER = PLAYER === BLACK ? WHITE : BLACK;
     if (!hasValidMove(board, PLAYER)) {
-      PLAYER = PLAYER === BLACK ? WHITE : BLACK;
-      console.log("パスされました！");
+      if (isGameEnd(board)) {
+        console.log("双方置けなくなりました！");
+        gameEnd();
+        return;
+      } else {
+        PLAYER = PLAYER === BLACK ? WHITE : BLACK;
+        console.log("パスされました！");
+      }
     }
     renderBoard(board, PLAYER);
     console.log("正常に動作しました！");
