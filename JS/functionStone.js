@@ -87,3 +87,20 @@ function hasValidMove(boardData, color) {
 
   return false;
 }
+
+function countStone(boardData) {
+  let countWhite = 0;
+  let countBlack = 0;
+
+  for (let x = 0; x < 8; x++) {
+    for (let y = 0; y < 8; y++) {
+      if (boardData[x][y] === BLACK) {
+        countBlack++;
+      } else if (boardData[x][y] === WHITE) {
+        countWhite++;
+      }
+    }
+  }
+
+  return { black: countBlack, white: countWhite };
+}

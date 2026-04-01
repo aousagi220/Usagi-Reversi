@@ -9,7 +9,7 @@ const board = Array(8)
 
 function resetGame() {
   PLAYER = BLACK;
-  startGame(board);
+  boardReset(board);
   renderBoard(board, PLAYER);
 }
 
