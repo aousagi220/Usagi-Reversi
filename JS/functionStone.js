@@ -55,8 +55,6 @@ function flipStones(boardData, x, y, currentPlayer) {
       }
     }
   }
-
-  return true;
 }
 
 function placeStone(boardData, x, y, currentPlayer) {
