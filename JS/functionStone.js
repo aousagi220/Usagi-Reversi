@@ -1,17 +1,18 @@
+const direction = [
+  [0, 1], // 右
+  [0, -1], // 左
+  [1, 0], // 下
+  [-1, 0], // 上
+  [1, 1], // 右下
+  [1, -1], // 左下
+  [-1, 1], // 右上
+  [-1, -1], // 左上
+];
+
 function canPlace(boardData, x, y, color) {
   if (boardData[x][y] !== EMPTY) return false;
 
   const opponent = color === BLACK ? WHITE : BLACK;
-  const direction = [
-    [0, 1], // 右
-    [0, -1], // 左
-    [1, 0], // 下
-    [-1, 0], // 上
-    [1, 1], // 右下
-    [1, -1], // 左下
-    [-1, 1], // 右上
-    [-1, -1], // 左上
-  ];
 
   for (const [dx, dy] of direction) {
     let nx = x + dx;
@@ -33,16 +34,6 @@ function canPlace(boardData, x, y, color) {
 
 function flipStones(boardData, x, y, color) {
   const opponent = color === BLACK ? WHITE : BLACK; // どっちの石を返すか
-  const direction = [
-    [0, 1], // 右
-    [0, -1], // 左
-    [1, 0], // 下
-    [-1, 0], // 上
-    [1, 1], // 右下
-    [1, -1], // 左下
-    [-1, 1], // 右上
-    [-1, -1], // 左上
-  ];
 
   for (const [dx, dy] of direction) {
     const stonesToFlips = []; // 記録するための配列の定義
