@@ -1,6 +1,6 @@
 function gameUI(boardData, currentPlayer, boardSize, count) {
   renderBoard(boardData, currentPlayer, boardSize);
-  renderPanel(count);
+  renderPanel(count, currentPlayer);
 }
 
 function renderBoard(boardData, currentPlayer, boardSize) {
@@ -31,7 +31,9 @@ function renderBoard(boardData, currentPlayer, boardSize) {
   }
 }
 
-function renderPanel(count) {
+function renderPanel(count, currentPlayer) {
   document.getElementById("black-count").textContent = count.black;
   document.getElementById("white-count").textContent = count.white;
+  document.getElementById("current-turn").className =
+    currentPlayer === BLACK ? "stone-icon black" : "stone-icon white";
 }
