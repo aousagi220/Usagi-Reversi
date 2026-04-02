@@ -1,9 +1,9 @@
-function renderBoard(boardData, currentPlayer) {
+function renderBoard(boardData, currentPlayer, boardSize) {
   const boardDiv = document.getElementById("board");
   boardDiv.innerHTML = "";
 
-  for (let x = 0; x < 8; x++) {
-    for (let y = 0; y < 8; y++) {
+  for (let x = 0; x < boardSize; x++) {
+    for (let y = 0; y < boardSize; y++) {
       const cellDiv = document.createElement("div");
       cellDiv.classList.add("cell");
       cellDiv.dataset.x = x;
@@ -17,7 +17,7 @@ function renderBoard(boardData, currentPlayer) {
         cellDiv.classList.add("white");
       }
 
-      if (canPlace(boardData, x, y, currentPlayer)) {
+      if (canPlace(boardData, x, y, currentPlayer, boardSize)) {
         cellDiv.classList.add("highlight");
       }
 
