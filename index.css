@@ -55,8 +55,8 @@ main {
 #board {
   margin: 8vh 6vh 8vh 0;
   display: grid;
-  grid-template-columns: repeat(8, min(8vh, calc(12.5vw - 40px), 80px));
-  grid-template-rows: repeat(8, min(8vh, calc(12.5vw - 40px), 80px));
+  grid-template-columns: repeat(var(--board-size), min(calc(64vh / var(--board-size)), calc(100vw / var(--board-size) - 40px), 80px));
+  grid-template-rows: repeat(var(--board-size), min(calc(64vh / var(--board-size)), calc(100vw / var(--board-size) - 40px), 80px));
   gap: 2px;
   border: 3px solid #1b5e20;
   border-radius: 4px;
@@ -64,13 +64,13 @@ main {
 }
 
 .cell {
-  width: min(8vh, calc(12.5vw - 40px), 80px);
-  height: min(8vh, calc(12.5vw - 40px), 80px);
+  width: min(calc(64vh / var(--board-size)), calc(100vw / var(--board-size) - 40px), 80px);
+  height: min(calc(64vh / var(--board-size)), calc(100vw / var(--board-size) - 40px), 80px);
   background-color: #388e3c;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: min(6vh, calc(9.375vw - 30px), 60px);
+  font-size: min(calc(48vh / var(--board-size)), calc(75vw / var(--board-size) - 30px), 60px);
   cursor: pointer;
   transition: background-color 0.15s;
 }
@@ -193,14 +193,14 @@ main {
 
   #board {
     margin: 2vh 2vw 2vh 0;
-    grid-template-columns: repeat(8, min(9.5vh, calc(12.5vw - 40px), 80px));
-    grid-template-rows: repeat(8, min(9.5vh, calc(12.5vw - 40px), 80px));
+    grid-template-columns: repeat(var(--board-size), min(calc(76vh / var(--board-size)), calc(100vw / var(--board-size) - 40px), 80px));
+    grid-template-rows: repeat(var(--board-size), min(calc(76vh / var(--board-size)), calc(100vw / var(--board-size) - 40px), 80px));
   }
 
   .cell {
-    width: min(9.5vh, calc(12.5vw - 40px), 80px);
-    height: min(9.5vh, calc(12.5vw - 40px), 80px);
-    font-size: min(7vh, calc(9.375vw - 30px), 60px);
+    width: min(calc(76vh / var(--board-size)), calc(100vw / var(--board-size) - 40px), 80px);
+    height: min(calc(76vh / var(--board-size)), calc(100vw / var(--board-size) - 40px), 80px);
+    font-size: min(calc(57vh / var(--board-size)), calc(75vw / var(--board-size) - 30px), 60px);
   }
 
   #panel {
@@ -230,14 +230,14 @@ main {
 
   #board {
     margin: 4vw auto 3vw;
-    grid-template-columns: repeat(8, calc((100vw - 40px) / 8));
-    grid-template-rows: repeat(8, calc((100vw - 40px) / 8));
+    grid-template-columns: repeat(var(--board-size), calc((100vw - 40px) / var(--board-size)));
+    grid-template-rows: repeat(var(--board-size), calc((100vw - 40px) / var(--board-size)));
   }
 
   .cell {
-    width: calc((100vw - 40px) / 8);
-    height: calc((100vw - 40px) / 8);
-    font-size: 8.5vw;
+    width: calc((100vw - 40px) / var(--board-size));
+    height: calc((100vw - 40px) / var(--board-size));
+    font-size: calc(68vw / var(--board-size));
     touch-action: manipulation;
   }
 
