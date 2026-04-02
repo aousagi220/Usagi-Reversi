@@ -32,6 +32,6 @@ function renderBoard(boardData, currentPlayer, boardSize) {
 }
 
 function renderPanel(count) {
-  document.getElementById("blackCount").textContent = count.black;
-  document.getElementById("whiteCount").textContent = count.white;
+  document.getElementById("black-count").textContent = count.black;
+  document.getElementById("white-count").textContent = count.white;
 }
