@@ -1,3 +1,8 @@
+function gameUI(boardData, currentPlayer, boardSize, count) {
+  renderBoard(boardData, currentPlayer, boardSize);
+  renderPanel(count);
+}
+
 function renderBoard(boardData, currentPlayer, boardSize) {
   const boardDiv = document.getElementById("board");
   boardDiv.innerHTML = "";
@@ -24,4 +29,9 @@ function renderBoard(boardData, currentPlayer, boardSize) {
       boardDiv.appendChild(cellDiv);
     }
   }
+}
+
+function renderPanel(count) {
+  document.getElementById("blackCount").textContent = count.black;
+  document.getElementById("whiteCount").textContent = count.white;
 }
