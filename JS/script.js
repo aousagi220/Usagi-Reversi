@@ -2,6 +2,7 @@ const EMPTY = 0; // no stone
 const BLACK = 1; // player 1
 const WHITE = 2; // player 2
 const BOARD_SIZE = 10;
+document.documentElement.style.setProperty('--board-size', BOARD_SIZE);
 let currentPlayer = BLACK;
 
 const board = Array(BOARD_SIZE)
