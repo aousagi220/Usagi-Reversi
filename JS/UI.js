@@ -1,3 +1,8 @@
+function gameUI(boardData, currentPlayer, boardSize, count) {
+  renderBoard(boardData, currentPlayer, boardSize);
+  renderPanel(count, currentPlayer);
+}
+
 function renderBoard(boardData, currentPlayer, boardSize) {
   const boardDiv = document.getElementById("board");
   boardDiv.innerHTML = "";
@@ -24,4 +29,11 @@ function renderBoard(boardData, currentPlayer, boardSize) {
       boardDiv.appendChild(cellDiv);
     }
   }
+}
+
+function renderPanel(count, currentPlayer) {
+  document.getElementById("black-count").textContent = count.black;
+  document.getElementById("white-count").textContent = count.white;
+  document.getElementById("current-turn").className =
+    currentPlayer === BLACK ? "stone-icon black" : "stone-icon white";
 }
