@@ -50,3 +50,7 @@ document.getElementById("board").addEventListener("click", (e) => {
     }
   }
 });
+
+document.getElementById("reset-btn").addEventListener("click", () => {
+  resetGame();
+});
