@@ -3,14 +3,46 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Noto+Sans+JP:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="./index.css" />
-    <title>Reversi</title>
+    <title>Usagi Reversi</title>
   </head>
   <body>
-    <header id="title">
-      <h1 id="titleContent">USAGI REVERSI</h1>
-    </header>
-    <div id="board"></div>
+    <div id="wrapper">
+      <header id="title">
+        <h1 id="titleContent">USAGI REVERSI</h1>
+        <p class="header-sub">うさぎリバーシ</p>
+      </header>
+      <main>
+        <div id="game">
+          <div id="board"></div>
+          <aside id="panel">
+            <div class="score-area">
+              <div class="score-box">
+                <span class="stone-icon black">●</span>
+                <span class="score-label">黒</span>
+                <span id="black-count" class="score-value">0</span>
+              </div>
+              <div class="score-box">
+                <span class="stone-icon white">●</span>
+                <span class="score-label">白</span>
+                <span id="white-count" class="score-value">0</span>
+              </div>
+            </div>
+            <div class="turn-area">
+              <p class="turn-label">手番</p>
+              <span id="current-turn" class="stone-icon black">●</span>
+            </div>
+            <button id="reset-btn">リセット</button>
+          </aside>
+        </div>
+      </main>
+    </div>
     <script src="./JS/functionBoard.js"></script>
     <script src="./JS/functionStone.js"></script>
     <script src="./JS/UI.js"></script>

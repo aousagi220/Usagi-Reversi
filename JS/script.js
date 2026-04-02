@@ -1,20 +1,22 @@
 const EMPTY = 0; // no stone
 const BLACK = 1; // player 1
 const WHITE = 2; // player 2
-let PLAYER = BLACK;
+const BOARD_SIZE = 8;
+document.documentElement.style.setProperty('--board-size', BOARD_SIZE);
+let currentPlayer = BLACK;
 
-const board = Array(8)
+const board = Array(BOARD_SIZE)
   .fill()
-  .map(() => Array(8).fill(0));
+  .map(() => Array(BOARD_SIZE).fill(EMPTY));
 
 function resetGame() {
-  PLAYER = BLACK;
-  boardReset(board);
-  renderBoard(board, PLAYER);
+  currentPlayer = BLACK;
+  boardReset(board, BOARD_SIZE);
+  gameUI(board, currentPlayer, BOARD_SIZE, countStone(board, BOARD_SIZE));
 }
 
 function gameEnd() {
-  const result = countStone(board);
+  const result = countStone(board, BOARD_SIZE);
   if (result.black > result.white) {
     console.log("黒の勝ち！");
   } else if (result.black < result.white) {
@@ -32,19 +34,23 @@ document.getElementById("board").addEventListener("click", (e) => {
   const x = parseInt(e.target.dataset.x, 10);
   const y = parseInt(e.target.dataset.y, 10);
 
-  if (placeStone(board, x, y, PLAYER)) {
-    PLAYER = PLAYER === BLACK ? WHITE : BLACK;
-    renderBoard(board, PLAYER);
-    if (!hasValidMove(board, PLAYER)) {
-      if (isGameEnd(board)) {
+  if (placeStone(board, x, y, currentPlayer, BOARD_SIZE)) {
+    currentPlayer = currentPlayer === BLACK ? WHITE : BLACK;
+    gameUI(board, currentPlayer, BOARD_SIZE, countStone(board, BOARD_SIZE));
+    if (!hasValidMove(board, currentPlayer, BOARD_SIZE)) {
+      if (isGameEnd(board, BOARD_SIZE)) {
         console.log("双方置けなくなりました！");
         gameEnd();
         return;
       } else {
-        PLAYER = PLAYER === BLACK ? WHITE : BLACK;
-        renderBoard(board, PLAYER);
+        currentPlayer = currentPlayer === BLACK ? WHITE : BLACK;
+        gameUI(board, currentPlayer, BOARD_SIZE, countStone(board, BOARD_SIZE));
         console.log("パスされました！");
       }
     }
   }
+});
+
+document.getElementById("reset-btn").addEventListener("click", () => {
+  resetGame();
 });

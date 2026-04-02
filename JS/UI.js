@@ -1,9 +1,14 @@
-function renderBoard(boardData, currentPlayer) {
+function gameUI(boardData, currentPlayer, boardSize, count) {
+  renderBoard(boardData, currentPlayer, boardSize);
+  renderPanel(count, currentPlayer);
+}
+
+function renderBoard(boardData, currentPlayer, boardSize) {
   const boardDiv = document.getElementById("board");
   boardDiv.innerHTML = "";
 
-  for (let x = 0; x < 8; x++) {
-    for (let y = 0; y < 8; y++) {
+  for (let x = 0; x < boardSize; x++) {
+    for (let y = 0; y < boardSize; y++) {
       const cellDiv = document.createElement("div");
       cellDiv.classList.add("cell");
       cellDiv.dataset.x = x;
@@ -17,11 +22,18 @@ function renderBoard(boardData, currentPlayer) {
         cellDiv.classList.add("white");
       }
 
-      if (canPlace(boardData, x, y, currentPlayer)) {
+      if (canPlace(boardData, x, y, currentPlayer, boardSize)) {
         cellDiv.classList.add("highlight");
       }
 
       boardDiv.appendChild(cellDiv);
     }
   }
+}
+
+function renderPanel(count, currentPlayer) {
+  document.getElementById("black-count").textContent = count.black;
+  document.getElementById("white-count").textContent = count.white;
+  document.getElementById("current-turn").className =
+    currentPlayer === BLACK ? "stone-icon black" : "stone-icon white";
 }
