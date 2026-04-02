@@ -9,6 +9,10 @@ const DIRECTIONS = [
   [-1, -1], // 左上
 ];
 
+function isInsideBoard(x, y, boardSize) {
+  return x >= 0 && x < boardSize && y >= 0 && y < boardSize;
+}
+
 function canPlace(boardData, x, y, currentPlayer, boardSize) {
   if (boardData[x][y] !== EMPTY) return false;
 
@@ -19,12 +23,12 @@ function canPlace(boardData, x, y, currentPlayer, boardSize) {
     let ny = y + dy;
     let foundOpponent = false;
 
-    while (nx >= 0 && nx < boardSize && ny >= 0 && ny < boardSize && boardData[nx][ny] === opponent) {
+    while (isInsideBoard(nx, ny, boardSize) && boardData[nx][ny] === opponent) {
       foundOpponent = true;
       nx += dx;
       ny += dy;
     }
-    if (foundOpponent && nx >= 0 && nx < boardSize && ny >= 0 && ny < boardSize && boardData[nx][ny] === currentPlayer) {
+    if (foundOpponent && isInsideBoard(nx, ny, boardSize) && boardData[nx][ny] === currentPlayer) {
       return true;
     }
   }
@@ -42,14 +46,14 @@ function flipStones(boardData, x, y, currentPlayer, boardSize) {
     let ny = y + dy;
 
     // 別の色がある場所を記録
-    while (nx >= 0 && nx < boardSize && ny >= 0 && ny < boardSize && boardData[nx][ny] === opponent) {
+    while (isInsideBoard(nx, ny, boardSize) && boardData[nx][ny] === opponent) {
       stonesToFlips.push([nx, ny]);
       nx += dx;
       ny += dy;
     }
 
     // 石を返していいか確認 & 石をすべて返す
-    if (nx >= 0 && nx < boardSize && ny >= 0 && ny < boardSize && boardData[nx][ny] === currentPlayer) {
+    if (isInsideBoard(nx, ny, boardSize) && boardData[nx][ny] === currentPlayer) {
       for (const [fx, fy] of stonesToFlips) {
         boardData[fx][fy] = currentPlayer;
       }

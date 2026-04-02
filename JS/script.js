@@ -1,7 +1,7 @@
 const EMPTY = 0; // no stone
 const BLACK = 1; // player 1
 const WHITE = 2; // player 2
-const BOARD_SIZE = 8;
+const BOARD_SIZE = 10;
 let currentPlayer = BLACK;
 
 const board = Array(BOARD_SIZE)
