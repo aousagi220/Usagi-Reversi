@@ -1,16 +1,16 @@
 const EMPTY = 0; // no stone
 const BLACK = 1; // player 1
 const WHITE = 2; // player 2
-let PLAYER = BLACK;
+let currentPlayer = BLACK;
 
 const board = Array(8)
   .fill()
   .map(() => Array(8).fill(0));
 
 function resetGame() {
-  PLAYER = BLACK;
+  currentPlayer = BLACK;
   boardReset(board);
-  renderBoard(board, PLAYER);
+  renderBoard(board, currentPlayer);
 }
 
 function gameEnd() {
@@ -32,17 +32,17 @@ document.getElementById("board").addEventListener("click", (e) => {
   const x = parseInt(e.target.dataset.x, 10);
   const y = parseInt(e.target.dataset.y, 10);
 
-  if (placeStone(board, x, y, PLAYER)) {
-    PLAYER = PLAYER === BLACK ? WHITE : BLACK;
-    renderBoard(board, PLAYER);
-    if (!hasValidMove(board, PLAYER)) {
+  if (placeStone(board, x, y, currentPlayer)) {
+    currentPlayer = currentPlayer === BLACK ? WHITE : BLACK;
+    renderBoard(board, currentPlayer);
+    if (!hasValidMove(board, currentPlayer)) {
       if (isGameEnd(board)) {
         console.log("双方置けなくなりました！");
         gameEnd();
         return;
       } else {
-        PLAYER = PLAYER === BLACK ? WHITE : BLACK;
-        renderBoard(board, PLAYER);
+        currentPlayer = currentPlayer === BLACK ? WHITE : BLACK;
+        renderBoard(board, currentPlayer);
         console.log("パスされました！");
       }
     }
