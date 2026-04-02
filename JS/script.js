@@ -12,7 +12,7 @@ const board = Array(BOARD_SIZE)
 function resetGame() {
   currentPlayer = BLACK;
   boardReset(board, BOARD_SIZE);
-  renderBoard(board, currentPlayer, BOARD_SIZE);
+  gameUI(board, currentPlayer, BOARD_SIZE, countStone(board, BOARD_SIZE));
 }
 
 function gameEnd() {
@@ -36,7 +36,7 @@ document.getElementById("board").addEventListener("click", (e) => {
 
   if (placeStone(board, x, y, currentPlayer, BOARD_SIZE)) {
     currentPlayer = currentPlayer === BLACK ? WHITE : BLACK;
-    renderBoard(board, currentPlayer, BOARD_SIZE);
+    gameUI(board, currentPlayer, BOARD_SIZE, countStone(board, BOARD_SIZE));
     if (!hasValidMove(board, currentPlayer, BOARD_SIZE)) {
       if (isGameEnd(board, BOARD_SIZE)) {
         console.log("双方置けなくなりました！");
@@ -44,7 +44,7 @@ document.getElementById("board").addEventListener("click", (e) => {
         return;
       } else {
         currentPlayer = currentPlayer === BLACK ? WHITE : BLACK;
-        renderBoard(board, currentPlayer, BOARD_SIZE);
+        gameUI(board, currentPlayer, BOARD_SIZE, countStone(board, BOARD_SIZE));
         console.log("パスされました！");
       }
     }
