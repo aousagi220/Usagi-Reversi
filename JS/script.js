@@ -23,6 +23,30 @@ function gameEnd() {
   else result.message = "引き分け！";
   showResultModal(result);
 }
+
+function switchTurn(currentPlayer, black, white) {
+  return currentPlayer === black ? white : black;
+}
+
+function proceedTurn(board, boardSize, currentPlayer, black, white) {
+  currentPlayer = switchTurn(currentPlayer, black, white);
+
+  gameUI(board, currentPlayer, boardSize, countStone(board, boardSize));
+  if (!hasValidMove(board, currentPlayer, boardSize)) {
+    if (isGameEnd(board, boardSize)) {
+      gameEnd();
+      return currentPlayer;
+    } else {
+      currentPlayer = switchTurn(currentPlayer, black, white);
+
+      gameUI(board, currentPlayer, boardSize, countStone(board, boardSize));
+      console.log("パスされました！");
+    }
+  }
+
+  return currentPlayer;
+}
+
 resetGame();
 
 document.getElementById("board").addEventListener("click", (e) => {
@@ -32,18 +56,7 @@ document.getElementById("board").addEventListener("click", (e) => {
   const y = parseInt(e.target.dataset.y, 10);
 
   if (placeStone(board, x, y, currentPlayer, BOARD_SIZE)) {
-    currentPlayer = currentPlayer === BLACK ? WHITE : BLACK;
-    gameUI(board, currentPlayer, BOARD_SIZE, countStone(board, BOARD_SIZE));
-    if (!hasValidMove(board, currentPlayer, BOARD_SIZE)) {
-      if (isGameEnd(board, BOARD_SIZE)) {
-        gameEnd();
-        return;
-      } else {
-        currentPlayer = currentPlayer === BLACK ? WHITE : BLACK;
-        gameUI(board, currentPlayer, BOARD_SIZE, countStone(board, BOARD_SIZE));
-        console.log("パスされました！");
-      }
-    }
+    currentPlayer = proceedTurn(board, BOARD_SIZE, currentPlayer, BLACK, WHITE);
   }
 });
 
