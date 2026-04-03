@@ -9,45 +9,7 @@ const board = Array(BOARD_SIZE)
   .fill()
   .map(() => Array(BOARD_SIZE).fill(EMPTY));
 
-function resetGame() {
-  currentPlayer = BLACK;
-  boardReset(board, BOARD_SIZE);
-  gameUI(board, currentPlayer, BOARD_SIZE, countStone(board, BOARD_SIZE));
-  hiddenResultModal();
-}
-
-function gameEnd() {
-  const result = countStone(board, BOARD_SIZE);
-  if (result.black > result.white) result.message = "黒の勝ち！";
-  else if (result.black < result.white) result.message = "白の勝ち！";
-  else result.message = "引き分け！";
-  showResultModal(result);
-}
-
-function switchTurn(currentPlayer, black, white) {
-  return currentPlayer === black ? white : black;
-}
-
-function proceedTurn(board, boardSize, currentPlayer, black, white) {
-  currentPlayer = switchTurn(currentPlayer, black, white);
-
-  gameUI(board, currentPlayer, boardSize, countStone(board, boardSize));
-  if (!hasValidMove(board, currentPlayer, boardSize)) {
-    if (isGameEnd(board, boardSize)) {
-      gameEnd();
-      return currentPlayer;
-    } else {
-      currentPlayer = switchTurn(currentPlayer, black, white);
-
-      gameUI(board, currentPlayer, boardSize, countStone(board, boardSize));
-      console.log("パスされました！");
-    }
-  }
-
-  return currentPlayer;
-}
-
-resetGame();
+currentPlayer = resetGame(board, BOARD_SIZE, currentPlayer, BLACK);
 
 document.getElementById("board").addEventListener("click", (e) => {
   if (!e.target.classList.contains("cell")) return;
@@ -61,9 +23,9 @@ document.getElementById("board").addEventListener("click", (e) => {
 });
 
 document.getElementById("reset-btn").addEventListener("click", () => {
-  resetGame();
+  currentPlayer = resetGame(board, BOARD_SIZE, currentPlayer, BLACK);
 });
 
 document.getElementById("rematch-btn").addEventListener("click", () => {
-  resetGame();
+  currentPlayer = resetGame(board, BOARD_SIZE, currentPlayer, BLACK);
 });
