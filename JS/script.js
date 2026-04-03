@@ -2,7 +2,7 @@ const EMPTY = 0; // no stone
 const BLACK = 1; // player 1
 const WHITE = 2; // player 2
 const BOARD_SIZE = 8;
-document.documentElement.style.setProperty('--board-size', BOARD_SIZE);
+document.documentElement.style.setProperty("--board-size", BOARD_SIZE);
 let currentPlayer = BLACK;
 
 const board = Array(BOARD_SIZE)
@@ -13,19 +13,16 @@ function resetGame() {
   currentPlayer = BLACK;
   boardReset(board, BOARD_SIZE);
   gameUI(board, currentPlayer, BOARD_SIZE, countStone(board, BOARD_SIZE));
+  hiddenResultModal();
 }
 
 function gameEnd() {
   const result = countStone(board, BOARD_SIZE);
-  if (result.black > result.white) {
-    console.log("黒の勝ち！");
-  } else if (result.black < result.white) {
-    console.log("白の勝ち！");
-  } else {
-    console.log("引き分け！");
-  }
+  if (result.black > result.white) result.message = "黒の勝ち！";
+  else if (result.black < result.white) result.message = "白の勝ち！";
+  else result.message = "引き分け！";
+  showResultModal(result);
 }
-
 resetGame();
 
 document.getElementById("board").addEventListener("click", (e) => {
@@ -39,7 +36,6 @@ document.getElementById("board").addEventListener("click", (e) => {
     gameUI(board, currentPlayer, BOARD_SIZE, countStone(board, BOARD_SIZE));
     if (!hasValidMove(board, currentPlayer, BOARD_SIZE)) {
       if (isGameEnd(board, BOARD_SIZE)) {
-        console.log("双方置けなくなりました！");
         gameEnd();
         return;
       } else {
@@ -52,5 +48,9 @@ document.getElementById("board").addEventListener("click", (e) => {
 });
 
 document.getElementById("reset-btn").addEventListener("click", () => {
+  resetGame();
+});
+
+document.getElementById("rematch-btn").addEventListener("click", () => {
   resetGame();
 });
