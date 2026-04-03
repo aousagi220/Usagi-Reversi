@@ -34,6 +34,16 @@ function renderBoard(boardData, currentPlayer, boardSize) {
 function renderPanel(count, currentPlayer) {
   document.getElementById("black-count").textContent = count.black;
   document.getElementById("white-count").textContent = count.white;
-  document.getElementById("current-turn").className =
-    currentPlayer === BLACK ? "stone-icon black" : "stone-icon white";
+  document.getElementById("current-turn").className = currentPlayer === BLACK ? "stone-icon black" : "stone-icon white";
+}
+
+function hiddenResultModal() {
+  document.getElementById("result-overlay").classList.remove("open");
+}
+
+function showResultModal(result) {
+  document.getElementById("result-message").textContent = result.message;
+  document.getElementById("result-black").textContent = result.black;
+  document.getElementById("result-white").textContent = result.white;
+  document.getElementById("result-overlay").classList.add("open");
 }
