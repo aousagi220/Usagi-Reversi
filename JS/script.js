@@ -23,6 +23,11 @@ function gameEnd() {
   else result.message = "引き分け！";
   showResultModal(result);
 }
+
+function switchTurn(currentPlayer, black, white) {
+  return currentPlayer === black ? white : black;
+}
+
 resetGame();
 
 document.getElementById("board").addEventListener("click", (e) => {
@@ -32,14 +37,14 @@ document.getElementById("board").addEventListener("click", (e) => {
   const y = parseInt(e.target.dataset.y, 10);
 
   if (placeStone(board, x, y, currentPlayer, BOARD_SIZE)) {
-    currentPlayer = currentPlayer === BLACK ? WHITE : BLACK;
+    currentPlayer = switchTurn(currentPlayer, BLACK, WHITE);
     gameUI(board, currentPlayer, BOARD_SIZE, countStone(board, BOARD_SIZE));
     if (!hasValidMove(board, currentPlayer, BOARD_SIZE)) {
       if (isGameEnd(board, BOARD_SIZE)) {
         gameEnd();
         return;
       } else {
-        currentPlayer = currentPlayer === BLACK ? WHITE : BLACK;
+        currentPlayer = switchTurn(currentPlayer, BLACK, WHITE);
         gameUI(board, currentPlayer, BOARD_SIZE, countStone(board, BOARD_SIZE));
         console.log("パスされました！");
       }
