@@ -17,7 +17,7 @@ document.getElementById("board").addEventListener("click", (e) => {
   const x = parseInt(e.target.dataset.x, 10);
   const y = parseInt(e.target.dataset.y, 10);
 
-  if (placeStone(x, y)) {
+  if (placeStone(x, y, currentPlayer)) {
     proceedTurn();
   }
 });
