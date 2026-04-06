@@ -9,26 +9,26 @@ const DIRECTIONS = [
   [-1, -1], // 左上
 ];
 
-function isInsideBoard(x, y, boardSize) {
-  return x >= 0 && x < boardSize && y >= 0 && y < boardSize;
+function isInsideBoard(x, y) {
+  return x >= 0 && x < BOARD_SIZE && y >= 0 && y < BOARD_SIZE;
 }
 
-function canPlace(boardData, x, y, currentPlayer, boardSize) {
-  if (boardData[x][y] !== EMPTY) return false;
+function canPlace(x, y, player) {
+  if (board[x][y] !== EMPTY) return false;
 
-  const opponent = currentPlayer === BLACK ? WHITE : BLACK;
+  const opponent = player === BLACK ? WHITE : BLACK;
 
   for (const [dx, dy] of DIRECTIONS) {
     let nx = x + dx;
     let ny = y + dy;
     let foundOpponent = false;
 
-    while (isInsideBoard(nx, ny, boardSize) && boardData[nx][ny] === opponent) {
+    while (isInsideBoard(nx, ny) && board[nx][ny] === opponent) {
       foundOpponent = true;
       nx += dx;
       ny += dy;
     }
-    if (foundOpponent && isInsideBoard(nx, ny, boardSize) && boardData[nx][ny] === currentPlayer) {
+    if (foundOpponent && isInsideBoard(nx, ny) && board[nx][ny] === player) {
       return true;
     }
   }
@@ -36,8 +36,8 @@ function canPlace(boardData, x, y, currentPlayer, boardSize) {
   return false;
 }
 
-function flipStones(boardData, x, y, currentPlayer, boardSize) {
-  const opponent = currentPlayer === BLACK ? WHITE : BLACK; // どっちの石を返すか
+function flipStones(x, y, player) {
+  const opponent = player === BLACK ? WHITE : BLACK; // どっちの石を返すか
 
   for (const [dx, dy] of DIRECTIONS) {
     const stonesToFlips = []; // 記録するための配列の定義
@@ -46,50 +46,50 @@ function flipStones(boardData, x, y, currentPlayer, boardSize) {
     let ny = y + dy;
 
     // 別の色がある場所を記録
-    while (isInsideBoard(nx, ny, boardSize) && boardData[nx][ny] === opponent) {
+    while (isInsideBoard(nx, ny) && board[nx][ny] === opponent) {
       stonesToFlips.push([nx, ny]);
       nx += dx;
       ny += dy;
     }
 
     // 石を返していいか確認 & 石をすべて返す
-    if (isInsideBoard(nx, ny, boardSize) && boardData[nx][ny] === currentPlayer) {
+    if (isInsideBoard(nx, ny) && board[nx][ny] === player) {
       for (const [fx, fy] of stonesToFlips) {
-        boardData[fx][fy] = currentPlayer;
+        board[fx][fy] = player;
       }
     }
   }
 }
 
-function placeStone(boardData, x, y, currentPlayer, boardSize) {
-  if (boardData[x][y] !== EMPTY) return false;
-  if (!canPlace(boardData, x, y, currentPlayer, boardSize)) return false;
+function placeStone(x, y, player) {
+  if (board[x][y] !== EMPTY) return false;
+  if (!canPlace(x, y, player)) return false;
 
-  boardData[x][y] = currentPlayer; // 石を置く
-  flipStones(boardData, x, y, currentPlayer, boardSize); // 石を返す
+  board[x][y] = player; // 石を置く
+  flipStones(x, y, player); // 石を返す
 
   return true;
 }
 
-function hasValidMove(boardData, currentPlayer, boardSize) {
-  for (let x = 0; x < boardSize; x++) {
-    for (let y = 0; y < boardSize; y++) {
-      if (canPlace(boardData, x, y, currentPlayer, boardSize)) return true;
+function hasValidMove(player) {
+  for (let x = 0; x < BOARD_SIZE; x++) {
+    for (let y = 0; y < BOARD_SIZE; y++) {
+      if (canPlace(x, y, player)) return true;
     }
   }
 
   return false;
 }
 
-function countStone(boardData, boardSize) {
+function countStone() {
   let countWhite = 0;
   let countBlack = 0;
 
-  for (let x = 0; x < boardSize; x++) {
-    for (let y = 0; y < boardSize; y++) {
-      if (boardData[x][y] === BLACK) {
+  for (let x = 0; x < BOARD_SIZE; x++) {
+    for (let y = 0; y < BOARD_SIZE; y++) {
+      if (board[x][y] === BLACK) {
         countBlack++;
-      } else if (boardData[x][y] === WHITE) {
+      } else if (board[x][y] === WHITE) {
         countWhite++;
       }
     }
@@ -98,6 +98,6 @@ function countStone(boardData, boardSize) {
   return { black: countBlack, white: countWhite };
 }
 
-function isGameEnd(boardData, boardSize) {
-  return !hasValidMove(boardData, BLACK, boardSize) && !hasValidMove(boardData, WHITE, boardSize);
+function isGameEnd() {
+  return !hasValidMove(BLACK) && !hasValidMove(WHITE);
 }

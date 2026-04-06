@@ -1,38 +1,34 @@
-function resetGame(board, boardSize, currentPlayer, black) {
-  currentPlayer = black;
-  boardReset(board, boardSize);
-  gameUI(board, currentPlayer, boardSize, countStone(board, boardSize));
+function resetGame() {
+  currentPlayer = BLACK;
+  boardReset();
+  gameUI(countStone());
   hiddenResultModal();
-  return currentPlayer;
 }
 
-function gameEnd(board, boardSize) {
-  const result = countStone(board, boardSize);
+function gameEnd() {
+  const result = countStone();
   if (result.black > result.white) result.message = "黒の勝ち！";
   else if (result.black < result.white) result.message = "白の勝ち！";
   else result.message = "引き分け！";
   showResultModal(result);
 }
 
-function switchTurn(currentPlayer, black, white) {
-  return currentPlayer === black ? white : black;
+function switchTurn() {
+  currentPlayer = currentPlayer === BLACK ? WHITE : BLACK;
 }
 
-function proceedTurn(board, boardSize, currentPlayer, black, white) {
-  currentPlayer = switchTurn(currentPlayer, black, white);
+function proceedTurn() {
+  switchTurn();
 
-  gameUI(board, currentPlayer, boardSize, countStone(board, boardSize));
-  if (!hasValidMove(board, currentPlayer, boardSize)) {
-    if (isGameEnd(board, boardSize)) {
-      gameEnd(board, boardSize);
-      return currentPlayer;
+  gameUI(countStone());
+  if (!hasValidMove(currentPlayer)) {
+    if (isGameEnd()) {
+      gameEnd();
     } else {
-      currentPlayer = switchTurn(currentPlayer, black, white);
+      switchTurn();
 
-      gameUI(board, currentPlayer, boardSize, countStone(board, boardSize));
+      gameUI(countStone());
       console.log("パスされました！");
     }
   }
-
-  return currentPlayer;
 }
