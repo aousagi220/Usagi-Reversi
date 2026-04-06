@@ -1,13 +1,13 @@
-function boardReset(boardData, boardSize) {
-  for (let x = 0; x < boardSize; x++) {
-    for (let y = 0; y < boardSize; y++) {
-      boardData[x][y] = EMPTY;
+function boardReset() {
+  for (let x = 0; x < BOARD_SIZE; x++) {
+    for (let y = 0; y < BOARD_SIZE; y++) {
+      board[x][y] = EMPTY;
     }
   }
 
-  const mid = boardSize / 2;
-  boardData[mid - 1][mid - 1] = WHITE;
-  boardData[mid - 1][mid] = BLACK;
-  boardData[mid][mid - 1] = BLACK;
-  boardData[mid][mid] = WHITE;
+  const mid = BOARD_SIZE / 2;
+  board[mid - 1][mid - 1] = WHITE;
+  board[mid - 1][mid] = BLACK;
+  board[mid][mid - 1] = BLACK;
+  board[mid][mid] = WHITE;
 }
