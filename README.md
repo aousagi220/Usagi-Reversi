@@ -6,7 +6,7 @@
 2. ZIPファイルを解凍してください。
 3. htmlファイルをchromeで開いてください。
 
-または、https://aousagi220.github.io/Usagi-Reversi/にアクセスしてください。
+または、https://aousagi220.github.io/Usagi-Reversi/ にアクセスしてください。
 
 ## 機能
 - 石の配置・反転・ターン管理などリバーシの基本ルールに対応
