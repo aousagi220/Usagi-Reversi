@@ -14,7 +14,7 @@ function isInsideBoard(x, y) {
 }
 
 function canPlace(x, y, player) {
-  if (board[x][y] !== EMPTY) return false;
+  if (BOARD[x][y] !== EMPTY) return false;
 
   const opponent = player === BLACK ? WHITE : BLACK;
 
@@ -23,12 +23,12 @@ function canPlace(x, y, player) {
     let ny = y + dy;
     let foundOpponent = false;
 
-    while (isInsideBoard(nx, ny) && board[nx][ny] === opponent) {
+    while (isInsideBoard(nx, ny) && BOARD[nx][ny] === opponent) {
       foundOpponent = true;
       nx += dx;
       ny += dy;
     }
-    if (foundOpponent && isInsideBoard(nx, ny) && board[nx][ny] === player) {
+    if (foundOpponent && isInsideBoard(nx, ny) && BOARD[nx][ny] === player) {
       return true;
     }
   }
@@ -46,26 +46,26 @@ function flipStones(x, y, player) {
     let ny = y + dy;
 
     // 別の色がある場所を記録
-    while (isInsideBoard(nx, ny) && board[nx][ny] === opponent) {
+    while (isInsideBoard(nx, ny) && BOARD[nx][ny] === opponent) {
       stonesToFlips.push([nx, ny]);
       nx += dx;
       ny += dy;
     }
 
     // 石を返していいか確認 & 石をすべて返す
-    if (isInsideBoard(nx, ny) && board[nx][ny] === player) {
+    if (isInsideBoard(nx, ny) && BOARD[nx][ny] === player) {
       for (const [fx, fy] of stonesToFlips) {
-        board[fx][fy] = player;
+        BOARD[fx][fy] = player;
       }
     }
   }
 }
 
 function placeStone(x, y, player) {
-  if (board[x][y] !== EMPTY) return false;
+  if (BOARD[x][y] !== EMPTY) return false;
   if (!canPlace(x, y, player)) return false;
 
-  board[x][y] = player; // 石を置く
+  BOARD[x][y] = player; // 石を置く
   flipStones(x, y, player); // 石を返す
 
   return true;
@@ -87,9 +87,9 @@ function countStone() {
 
   for (let x = 0; x < BOARD_SIZE; x++) {
     for (let y = 0; y < BOARD_SIZE; y++) {
-      if (board[x][y] === BLACK) {
+      if (BOARD[x][y] === BLACK) {
         countBlack++;
-      } else if (board[x][y] === WHITE) {
+      } else if (BOARD[x][y] === WHITE) {
         countWhite++;
       }
     }
@@ -100,4 +100,16 @@ function countStone() {
 
 function isGameEnd() {
   return !hasValidMove(BLACK) && !hasValidMove(WHITE);
+}
+
+function getValidMoves() {
+  const validMoves = [];
+  for (let x = 0; x < BOARD_SIZE; x++) {
+    for (let y = 0; y < BOARD_SIZE; y++) {
+      if (canPlace(x, y, currentPlayer)) {
+        validMoves.push([x, y]);
+      }
+    }
+  }
+  return validMoves;
 }

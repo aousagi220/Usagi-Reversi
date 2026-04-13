@@ -25,11 +25,17 @@ function proceedTurn() {
     if (isGameEnd()) {
       gameEnd();
     } else {
-      passTurnUi();
-      switchTurn();
-
-      gameUI(countStone());
-      console.log("パスされました！");
+      passTurn();
     }
   }
+  cpuTurn();
+
 }
+
+function passTurn() {
+  passTurnUi();
+  switchTurn();
+
+  gameUI(countStone());
+}
+

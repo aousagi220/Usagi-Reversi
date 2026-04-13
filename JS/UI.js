@@ -14,10 +14,10 @@ function renderBoard() {
       cellDiv.dataset.x = x;
       cellDiv.dataset.y = y;
 
-      if (board[x][y] === BLACK) {
+      if (BOARD[x][y] === BLACK) {
         cellDiv.textContent = "●";
         cellDiv.classList.add("black");
-      } else if (board[x][y] === WHITE) {
+      } else if (BOARD[x][y] === WHITE) {
         cellDiv.textContent = "●";
         cellDiv.classList.add("white");
       }
