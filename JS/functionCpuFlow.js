@@ -5,7 +5,7 @@ function clearTimeout(cpuTimerId) {
 }
 
 function playCpuMove(cpuType) {
-  const validMoves = getValidMoves(currentPlayer);
+  const validMoves = getValidMoves();
   if (validMoves.length === 0) return null;
 
   if (cpuType === WEAK) {
@@ -29,7 +29,7 @@ function cpuTurn() {
       clearTimeout(cpuTimerId);
     }
     cpuTimerId = setTimeout(() => {
-      if (getValidMoves(currentPlayer).length === 0) {
+      if (getValidMoves().length === 0) {
         passTurn();
         return;
       }

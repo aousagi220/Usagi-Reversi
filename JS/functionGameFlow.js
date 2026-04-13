@@ -25,6 +25,7 @@ function proceedTurn() {
   if (!hasValidMove(currentPlayer)) {
     if (isGameEnd()) {
       gameEnd();
+      clearTimeout(cpuTimeout);
       return;
     } else {
       passTurn();
