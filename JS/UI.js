@@ -47,3 +47,17 @@ function showResultModal(result) {
   document.getElementById("result-white").textContent = result.white;
   document.getElementById("result-overlay").classList.add("open");
 }
+
+function passTurnUi() {
+  const toast = document.getElementById("pass-toast");
+
+  toast.textContent = currentPlayer === BLACK ? "黒はパスされました！" : "白はパスされました！";
+
+  toast.classList.remove("hide");
+  toast.classList.add("show");
+
+  setTimeout(() => {
+    toast.classList.remove("show");
+    toast.classList.add("hide");
+  }, 1000);
+}

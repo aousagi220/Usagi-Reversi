@@ -176,6 +176,59 @@ main {
   background-color: #b71c1c;
 }
 
+/* ===== Pass Toast ===== */
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+@keyframes toast-out {
+  from {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-50%) translateY(12px);
+  }
+}
+
+#pass-toast {
+  display: none;
+  position: fixed;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #4e342e;
+  color: #fff;
+  font-family: "Noto Sans JP", sans-serif;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  padding: 12px 28px;
+  border-radius: 999px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  white-space: nowrap;
+  z-index: 200;
+}
+
+#pass-toast.show {
+  display: block;
+  animation: toast-in 0.25s ease forwards;
+}
+
+#pass-toast.hide {
+  display: block;
+  animation: toast-out 0.25s ease forwards;
+  pointer-events: none;
+}
+
 /* ===== Result Modal ===== */
 @keyframes overlay-in {
   from { opacity: 0; }
