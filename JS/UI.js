@@ -49,14 +49,15 @@ function showResultModal(result) {
 }
 
 function passTurnUi() {
-  if (currentPlayer === BLACK) {
-    document.getElementById("pass-toast").textContent = "黒はパスされました！";
-  } else {
-    document.getElementById("pass-toast").textContent = "白はパスされました！";
-  }
-  document.getElementById("pass-toast").classList.add("show");
+  const Toast = document.getElementById("pass-toast");
+
+  Toast.textContent = BLACK === currentPlayer ? "黒はパスされました！" : "白はパスされました！";
+
+  Toast.classList.remove("hide");
+  Toast.classList.add("show");
+
   setTimeout(() => {
-    document.getElementById("pass-toast").classList.remove("show");
-    document.getElementById("pass-toast").classList.add("hide");
+    Toast.classList.remove("show");
+    Toast.classList.add("hide");
   }, 1000);
 }
