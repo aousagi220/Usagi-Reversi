@@ -49,15 +49,15 @@ function showResultModal(result) {
 }
 
 function passTurnUi() {
-  const Toast = document.getElementById("pass-toast");
+  const toast = document.getElementById("pass-toast");
 
-  Toast.textContent = BLACK === currentPlayer ? "黒はパスされました！" : "白はパスされました！";
+  toast.textContent = currentPlayer === BLACK ? "黒はパスされました！" : "白はパスされました！";
 
-  Toast.classList.remove("hide");
-  Toast.classList.add("show");
+  toast.classList.remove("hide");
+  toast.classList.add("show");
 
   setTimeout(() => {
-    Toast.classList.remove("show");
-    Toast.classList.add("hide");
+    toast.classList.remove("show");
+    toast.classList.add("hide");
   }, 1000);
 }
