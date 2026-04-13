@@ -43,8 +43,33 @@
         </div>
       </main>
     </div>
+    <!-- パストースト -->
+    <div id="pass-toast"></div>
+
+    <!-- 勝利モーダル -->
+    <div id="result-overlay">
+      <div id="result-modal">
+        <h2 id="result-title">ゲーム終了</h2>
+        <p id="result-message"></p>
+        <div class="result-score">
+          <div class="result-score-box">
+            <span class="stone-icon black">●</span>
+            <span class="score-label">黒</span>
+            <span id="result-black" class="score-value">0</span>
+          </div>
+          <div class="result-score-box">
+            <span class="stone-icon white">●</span>
+            <span class="score-label">白</span>
+            <span id="result-white" class="score-value">0</span>
+          </div>
+        </div>
+        <button id="rematch-btn">もう一度遊ぶ</button>
+      </div>
+    </div>
+
     <script src="./JS/functionBoard.js"></script>
     <script src="./JS/functionStone.js"></script>
+    <script src="./JS/functionGameFlow.js"></script>
     <script src="./JS/UI.js"></script>
     <script src="./JS/script.js"></script>
   </body>
