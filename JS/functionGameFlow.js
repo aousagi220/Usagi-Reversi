@@ -25,6 +25,7 @@ function proceedTurn() {
     if (isGameEnd()) {
       gameEnd();
     } else {
+      passTurnUi();
       switchTurn();
 
       gameUI(countStone());
