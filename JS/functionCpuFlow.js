@@ -1,3 +1,9 @@
+let cpuTimerId = null;
+
+function clearTimeout(cpuTimerId) {
+  cpuTimerId = null;
+}
+
 function playCpuMove(cpuType) {
   const validMoves = getValidMoves(currentPlayer);
   if (validMoves.length === 0) return null;
@@ -15,17 +21,21 @@ function WeakestMove(validMoves) {
 }
 
 function cpuTurn() {
-  const player = currentPlayer
+  const player = currentPlayer;
   const playerName = player === BLACK ? blackPlayerName : whitePlayerName;
-  const cpuType = player === BLACK ? blackCpuType : whiteCpuType; 
-    if (playerName === TYPE_CPU) {
-    setTimeout(() => {
+  const cpuType = player === BLACK ? blackCpuType : whiteCpuType;
+  if (playerName === TYPE_CPU) {
+    if (cpuTimerId !== null) {
+      clearTimeout(cpuTimerId);
+    }
+    cpuTimerId = setTimeout(() => {
       if (getValidMoves(currentPlayer).length === 0) {
         passTurn();
         return;
       }
       playCpuMove(cpuType);
       proceedTurn();
+      cpuTimerId = null;
     }, 500);
   }
 }

@@ -3,6 +3,7 @@ function resetGame() {
   boardReset();
   gameUI(countStone());
   hiddenResultModal();
+  clearTimeout(cpuTimeout);
 }
 
 function gameEnd() {
@@ -24,6 +25,7 @@ function proceedTurn() {
   if (!hasValidMove(currentPlayer)) {
     if (isGameEnd()) {
       gameEnd();
+      return;
     } else {
       passTurn();
     }
