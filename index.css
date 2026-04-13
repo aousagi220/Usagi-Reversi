@@ -226,6 +226,7 @@ main {
 #pass-toast.hide {
   display: block;
   animation: toast-out 0.25s ease forwards;
+  pointer-events: none;
 }
 
 /* ===== Result Modal ===== */
