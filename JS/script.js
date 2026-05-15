@@ -2,7 +2,7 @@ const EMPTY = 0; // no stone
 const BLACK = 1; // player 1
 const WHITE = 2; // player 2
 const TYPE_HUMAN = 0;
-const TYPE_CPU =1;
+const TYPE_CPU = 1;
 const BOARD_SIZE = 8;
 const WEAK = 0;
 const NORMAL = 1;
@@ -41,4 +41,22 @@ document.getElementById("reset-btn").addEventListener("click", () => {
 
 document.getElementById("rematch-btn").addEventListener("click", () => {
   resetGame();
+});
+
+document.getElementById("black-cpu-toggle").addEventListener("change", (e) => {
+  blackPlayerName = e.target.checked ? TYPE_CPU : TYPE_HUMAN;
+  document.getElementById("black-cpu-level").disabled = !e.target.checked;
+});
+
+document.getElementById("white-cpu-toggle").addEventListener("change", (e) => {
+  whitePlayerName = e.target.checked ? TYPE_CPU : TYPE_HUMAN;
+  document.getElementById("white-cpu-level").disabled = !e.target.checked;
+});
+
+document.getElementById("black-cpu-level").addEventListener("change", (e) => {
+  blackCpuType = parseInt(e.target.value, 10);
+});
+
+document.getElementById("white-cpu-level").addEventListener("change", (e) => {
+  whiteCpuType = parseInt(e.target.value, 10);
 });

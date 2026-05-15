@@ -55,8 +55,14 @@ main {
 #board {
   margin: 8vh 6vh 8vh 0;
   display: grid;
-  grid-template-columns: repeat(var(--board-size), min(calc(64vh / var(--board-size)), calc(100vw / var(--board-size) - 40px), 80px));
-  grid-template-rows: repeat(var(--board-size), min(calc(64vh / var(--board-size)), calc(100vw / var(--board-size) - 40px), 80px));
+  grid-template-columns: repeat(
+    var(--board-size),
+    min(calc(64vh / var(--board-size)), calc(100vw / var(--board-size) - 40px), 80px)
+  );
+  grid-template-rows: repeat(
+    var(--board-size),
+    min(calc(64vh / var(--board-size)), calc(100vw / var(--board-size) - 40px), 80px)
+  );
   gap: 2px;
   border: 3px solid #1b5e20;
   border-radius: 4px;
@@ -176,6 +182,106 @@ main {
   background-color: #b71c1c;
 }
 
+/* ===== CPU Settings ===== */
+.cpu-settings {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: min(1vh, 7px);
+}
+
+.cpu-settings-title {
+  margin: 0;
+  font-size: min(1.6vh, 11px);
+  font-weight: 700;
+  color: #999;
+  letter-spacing: 2px;
+  text-align: center;
+}
+
+.cpu-row {
+  display: flex;
+  align-items: center;
+  gap: min(0.8vh, 6px);
+  background-color: #fdf8f2;
+  border: 1px solid #d7bfa0;
+  border-radius: 6px;
+  padding: min(0.8vh, 7px) min(1.2vh, 9px);
+}
+
+.cpu-player-icon {
+  font-size: min(2.4vh, 16px);
+  flex-shrink: 0;
+}
+
+/* Toggle switch */
+.toggle {
+  position: relative;
+  display: inline-block;
+  width: 34px;
+  height: 19px;
+  flex-shrink: 0;
+}
+
+.toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background-color: #ccc;
+  border-radius: 999px;
+  transition: background-color 0.2s;
+}
+
+.toggle-slider::before {
+  content: "";
+  position: absolute;
+  width: 13px;
+  height: 13px;
+  left: 3px;
+  top: 3px;
+  background-color: #fff;
+  border-radius: 50%;
+  transition: transform 0.2s;
+}
+
+.toggle input:checked + .toggle-slider {
+  background-color: #5d4037;
+}
+
+.toggle input:checked + .toggle-slider::before {
+  transform: translateX(15px);
+}
+
+.cpu-toggle-label {
+  font-size: min(1.8vh, 12px);
+  font-weight: 700;
+  color: #555;
+  flex: 1;
+}
+
+.cpu-level-select {
+  font-family: "Noto Sans JP", sans-serif;
+  font-size: min(1.6vh, 11px);
+  font-weight: 700;
+  color: #5d4037;
+  background-color: #f5ede0;
+  border: 1px solid #d7bfa0;
+  border-radius: 4px;
+  padding: 2px 4px;
+  cursor: pointer;
+}
+
+.cpu-level-select:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
 /* ===== Pass Toast ===== */
 @keyframes toast-in {
   from {
@@ -231,8 +337,12 @@ main {
 
 /* ===== Result Modal ===== */
 @keyframes overlay-in {
-  from { opacity: 0; }
-  to   { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes modal-in {
@@ -382,8 +492,14 @@ main {
 
   #board {
     margin: 2vh 2vw 2vh 0;
-    grid-template-columns: repeat(var(--board-size), min(calc(76vh / var(--board-size)), calc(100vw / var(--board-size) - 40px), 80px));
-    grid-template-rows: repeat(var(--board-size), min(calc(76vh / var(--board-size)), calc(100vw / var(--board-size) - 40px), 80px));
+    grid-template-columns: repeat(
+      var(--board-size),
+      min(calc(76vh / var(--board-size)), calc(100vw / var(--board-size) - 40px), 80px)
+    );
+    grid-template-rows: repeat(
+      var(--board-size),
+      min(calc(76vh / var(--board-size)), calc(100vw / var(--board-size) - 40px), 80px)
+    );
   }
 
   .cell {

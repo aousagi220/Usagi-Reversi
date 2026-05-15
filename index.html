@@ -38,6 +38,35 @@
               <p class="turn-label">手番</p>
               <span id="current-turn" class="stone-icon black">●</span>
             </div>
+            <div class="cpu-settings">
+              <p class="cpu-settings-title">CPU設定</p>
+              <div class="cpu-row">
+                <span class="stone-icon black cpu-player-icon">●</span>
+                <label class="toggle">
+                  <input type="checkbox" id="black-cpu-toggle" />
+                  <span class="toggle-slider"></span>
+                </label>
+                <span class="cpu-toggle-label">CPU</span>
+                <select id="black-cpu-level" class="cpu-level-select" disabled>
+                  <option value="0">弱</option>
+                  <option value="1">普通</option>
+                  <option value="2">強</option>
+                </select>
+              </div>
+              <div class="cpu-row">
+                <span class="stone-icon white cpu-player-icon">●</span>
+                <label class="toggle">
+                  <input type="checkbox" id="white-cpu-toggle" checked />
+                  <span class="toggle-slider"></span>
+                </label>
+                <span class="cpu-toggle-label">CPU</span>
+                <select id="white-cpu-level" class="cpu-level-select">
+                  <option value="0">弱</option>
+                  <option value="1">普通</option>
+                  <option value="2">強</option>
+                </select>
+              </div>
+            </div>
             <button id="reset-btn">リセット</button>
           </aside>
         </div>

@@ -3,7 +3,8 @@ function resetGame() {
   boardReset();
   gameUI(countStone());
   hiddenResultModal();
-  clearTimeout(cpuTimeout);
+  window.clearTimeout(cpuTimerId);
+  cpuTimerId = null;
 }
 
 function gameEnd() {
@@ -25,14 +26,14 @@ function proceedTurn() {
   if (!hasValidMove(currentPlayer)) {
     if (isGameEnd()) {
       gameEnd();
-      clearTimeout(cpuTimeout);
+      window.clearTimeout(cpuTimerId);
+      cpuTimerId = null;
       return;
     } else {
       passTurn();
     }
   }
   cpuTurn();
-
 }
 
 function passTurn() {
@@ -41,4 +42,3 @@ function passTurn() {
 
   gameUI(countStone());
 }
-

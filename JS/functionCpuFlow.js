@@ -1,9 +1,5 @@
 let cpuTimerId = null;
 
-function clearTimeout(cpuTimerId) {
-  cpuTimerId = null;
-}
-
 function playCpuMove(cpuType) {
   const validMoves = getValidMoves();
   if (validMoves.length === 0) return null;
@@ -26,16 +22,16 @@ function cpuTurn() {
   const cpuType = player === BLACK ? blackCpuType : whiteCpuType;
   if (playerName === TYPE_CPU) {
     if (cpuTimerId !== null) {
-      clearTimeout(cpuTimerId);
+      window.clearTimeout(cpuTimerId);
     }
     cpuTimerId = setTimeout(() => {
+      cpuTimerId = null;
       if (getValidMoves().length === 0) {
         passTurn();
         return;
       }
       playCpuMove(cpuType);
       proceedTurn();
-      cpuTimerId = null;
     }, 500);
   }
 }
