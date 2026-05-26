@@ -1,17 +1,30 @@
 const EMPTY = 0; // no stone
 const BLACK = 1; // player 1
 const WHITE = 2; // player 2
+const TYPE_HUMAN = 0;
+const TYPE_CPU = 1;
 const BOARD_SIZE = 8;
+const WEAK = 0;
+const NORMAL = 1;
+const STRONG = 2;
 document.documentElement.style.setProperty("--board-size", BOARD_SIZE);
-let currentPlayer = BLACK;
 
-const board = Array(BOARD_SIZE)
+let currentPlayer = BLACK;
+let blackPlayerName = TYPE_HUMAN;
+let whitePlayerName = TYPE_CPU;
+let blackCpuType = WEAK;
+let whiteCpuType = WEAK;
+
+const BOARD = Array(BOARD_SIZE)
   .fill()
   .map(() => Array(BOARD_SIZE).fill(EMPTY));
 
 resetGame();
 
 document.getElementById("board").addEventListener("click", (e) => {
+  if (currentPlayer === BLACK && blackPlayerName === TYPE_CPU) return;
+  if (currentPlayer === WHITE && whitePlayerName === TYPE_CPU) return;
+
   if (!e.target.classList.contains("cell")) return;
 
   const x = parseInt(e.target.dataset.x, 10);
@@ -28,4 +41,26 @@ document.getElementById("reset-btn").addEventListener("click", () => {
 
 document.getElementById("rematch-btn").addEventListener("click", () => {
   resetGame();
+});
+
+document.getElementById("black-cpu-toggle").addEventListener("change", (e) => {
+  blackPlayerName = e.target.checked ? TYPE_CPU : TYPE_HUMAN;
+  document.getElementById("black-cpu-level").disabled = !e.target.checked;
+  renderBoard();
+});
+
+document.getElementById("white-cpu-toggle").addEventListener("change", (e) => {
+  whitePlayerName = e.target.checked ? TYPE_CPU : TYPE_HUMAN;
+  document.getElementById("white-cpu-level").disabled = !e.target.checked;
+  renderBoard();
+});
+
+document.getElementById("black-cpu-level").addEventListener("change", (e) => {
+  blackCpuType = parseInt(e.target.value, 10);
+  renderBoard();
+});
+
+document.getElementById("white-cpu-level").addEventListener("change", (e) => {
+  whiteCpuType = parseInt(e.target.value, 10);
+  renderBoard();
 });

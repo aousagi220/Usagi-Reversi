@@ -3,6 +3,8 @@ function resetGame() {
   boardReset();
   gameUI(countStone());
   hiddenResultModal();
+  window.clearTimeout(cpuTimerId);
+  cpuTimerId = null;
 }
 
 function gameEnd() {
@@ -24,12 +26,19 @@ function proceedTurn() {
   if (!hasValidMove(currentPlayer)) {
     if (isGameEnd()) {
       gameEnd();
+      window.clearTimeout(cpuTimerId);
+      cpuTimerId = null;
+      return;
     } else {
-      passTurnUi();
-      switchTurn();
-
-      gameUI(countStone());
-      console.log("パスされました！");
+      passTurn();
     }
   }
+  cpuTurn();
+}
+
+function passTurn() {
+  passTurnUi();
+  switchTurn();
+
+  gameUI(countStone());
 }
