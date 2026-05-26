@@ -53,10 +53,17 @@ main {
 
 /* ===== Board ===== */
 #board {
+  position: relative;
   margin: 8vh 6vh 8vh 0;
   display: grid;
-  grid-template-columns: repeat(var(--board-size), min(calc(64vh / var(--board-size)), calc(100vw / var(--board-size) - 40px), 80px));
-  grid-template-rows: repeat(var(--board-size), min(calc(64vh / var(--board-size)), calc(100vw / var(--board-size) - 40px), 80px));
+  grid-template-columns: repeat(
+    var(--board-size),
+    min(calc(64vh / var(--board-size)), calc(100vw / var(--board-size) - 40px), 80px)
+  );
+  grid-template-rows: repeat(
+    var(--board-size),
+    min(calc(64vh / var(--board-size)), calc(100vw / var(--board-size) - 40px), 80px)
+  );
   gap: 2px;
   border: 3px solid #1b5e20;
   border-radius: 4px;
@@ -176,6 +183,130 @@ main {
   background-color: #b71c1c;
 }
 
+/* ===== CPU Settings ===== */
+.cpu-settings {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: min(1vh, 7px);
+}
+
+.cpu-settings-title {
+  margin: 0;
+  font-size: min(1.6vh, 11px);
+  font-weight: 700;
+  color: #999;
+  letter-spacing: 2px;
+  text-align: center;
+}
+
+.cpu-row {
+  display: flex;
+  align-items: center;
+  gap: min(0.8vh, 6px);
+  background-color: #fdf8f2;
+  border: 1px solid #d7bfa0;
+  border-radius: 6px;
+  padding: min(0.8vh, 7px) min(1.2vh, 9px);
+}
+
+.cpu-player-icon {
+  font-size: min(2.4vh, 16px);
+  flex-shrink: 0;
+}
+
+/* Toggle switch */
+.toggle {
+  position: relative;
+  display: inline-block;
+  width: 34px;
+  height: 19px;
+  flex-shrink: 0;
+}
+
+.toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background-color: #ccc;
+  border-radius: 999px;
+  transition: background-color 0.2s;
+}
+
+.toggle-slider::before {
+  content: "";
+  position: absolute;
+  width: 13px;
+  height: 13px;
+  left: 3px;
+  top: 3px;
+  background-color: #fff;
+  border-radius: 50%;
+  transition: transform 0.2s;
+}
+
+.toggle input:checked + .toggle-slider {
+  background-color: #5d4037;
+}
+
+.toggle input:checked + .toggle-slider::before {
+  transform: translateX(15px);
+}
+
+.cpu-toggle-label {
+  font-size: min(1.8vh, 12px);
+  font-weight: 700;
+  color: #555;
+  flex: 1;
+}
+
+.cpu-level-select {
+  font-family: "Noto Sans JP", sans-serif;
+  font-size: min(1.6vh, 11px);
+  font-weight: 700;
+  color: #5d4037;
+  background-color: #f5ede0;
+  border: 1px solid #d7bfa0;
+  border-radius: 4px;
+  padding: 2px 4px;
+  cursor: pointer;
+}
+
+.cpu-level-select:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* ===== CPU Unavailable Overlay ===== */
+#cpu-unavailable-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(20, 14, 6, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 2px;
+  z-index: 10;
+}
+
+.overlay-text {
+  margin: 0;
+  color: #fff;
+  font-family: "Noto Sans JP", sans-serif;
+  font-size: clamp(0.95rem, 2.5vw, 1.4rem);
+  font-weight: 700;
+  text-align: center;
+  line-height: 2;
+  letter-spacing: 2px;
+  text-shadow: 2px 2px 6px rgba(0, 0, 0, 0.7);
+}
+
 /* ===== Pass Toast ===== */
 @keyframes toast-in {
   from {
@@ -231,8 +362,12 @@ main {
 
 /* ===== Result Modal ===== */
 @keyframes overlay-in {
-  from { opacity: 0; }
-  to   { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes modal-in {
@@ -345,6 +480,125 @@ main {
   }
 }
 
+/* ===== Tablet / Narrow Desktop (601px - 860px) ===== */
+@media (min-width: 601px) and (max-width: 860px) {
+  #game {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  #board {
+    margin: 4vh auto 3vh;
+    grid-template-columns: repeat(
+      var(--board-size),
+      min(calc(75vh / var(--board-size)), calc((100vw - 100px) / var(--board-size)), 80px)
+    );
+    grid-template-rows: repeat(
+      var(--board-size),
+      min(calc(75vh / var(--board-size)), calc((100vw - 100px) / var(--board-size)), 80px)
+    );
+  }
+
+  .cell {
+    width: min(calc(75vh / var(--board-size)), calc((100vw - 100px) / var(--board-size)), 80px);
+    height: min(calc(75vh / var(--board-size)), calc((100vw - 100px) / var(--board-size)), 80px);
+    font-size: min(calc(56vh / var(--board-size)), calc(75vw / var(--board-size) - 15px), 60px);
+    touch-action: manipulation;
+  }
+
+  #panel {
+    margin: 0 0 4vh;
+    padding: 14px 20px;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+    box-sizing: border-box;
+    min-width: unset;
+  }
+
+  .score-area {
+    flex-direction: row;
+    gap: 10px;
+  }
+
+  .score-box {
+    flex: 1;
+    font-size: 1rem;
+    padding: 6px 12px;
+  }
+
+  .score-value {
+    font-size: 1.2rem;
+  }
+
+  .turn-area {
+    order: 2;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .turn-label {
+    font-size: 1rem;
+  }
+
+  .stone-icon {
+    font-size: 1.8rem;
+  }
+
+  #reset-btn {
+    order: 3;
+    padding: 10px 28px;
+    font-size: 0.95rem;
+    width: auto;
+  }
+
+  .cpu-settings {
+    order: 4;
+    flex: 1 1 100%;
+    gap: 8px;
+  }
+
+  .cpu-settings-title {
+    font-size: 0.75rem;
+  }
+
+  .cpu-row {
+    padding: 8px 12px;
+    gap: 10px;
+  }
+
+  .cpu-player-icon {
+    font-size: 1.2rem;
+  }
+
+  .toggle {
+    width: 40px;
+    height: 22px;
+  }
+
+  .toggle-slider::before {
+    width: 16px;
+    height: 16px;
+  }
+
+  .toggle input:checked + .toggle-slider::before {
+    transform: translateX(18px);
+  }
+
+  .cpu-toggle-label {
+    font-size: 0.9rem;
+  }
+
+  .cpu-level-select {
+    font-size: 0.9rem;
+    padding: 4px 6px;
+  }
+}
+
 /* ===== Landscape phone (short screens) ===== */
 @media (max-height: 500px) and (min-width: 601px) {
   #result-modal {
@@ -380,10 +634,22 @@ main {
     display: none;
   }
 
+  /* タブレットクエリの column レイアウトを横画面では row に戻す */
+  #game {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+
   #board {
     margin: 2vh 2vw 2vh 0;
-    grid-template-columns: repeat(var(--board-size), min(calc(76vh / var(--board-size)), calc(100vw / var(--board-size) - 40px), 80px));
-    grid-template-rows: repeat(var(--board-size), min(calc(76vh / var(--board-size)), calc(100vw / var(--board-size) - 40px), 80px));
+    grid-template-columns: repeat(
+      var(--board-size),
+      min(calc(76vh / var(--board-size)), calc(100vw / var(--board-size) - 40px), 80px)
+    );
+    grid-template-rows: repeat(
+      var(--board-size),
+      min(calc(76vh / var(--board-size)), calc(100vw / var(--board-size) - 40px), 80px)
+    );
   }
 
   .cell {
@@ -394,6 +660,48 @@ main {
 
   #panel {
     margin: 2vh 0;
+  }
+
+  /* CPU settings 横画面 */
+  .cpu-settings {
+    gap: 4px;
+  }
+
+  .cpu-settings-title {
+    font-size: 0.62rem;
+    letter-spacing: 1px;
+  }
+
+  .cpu-row {
+    padding: 4px 8px;
+    gap: 5px;
+  }
+
+  .cpu-player-icon {
+    font-size: 0.85rem;
+  }
+
+  .toggle {
+    width: 30px;
+    height: 17px;
+  }
+
+  .toggle-slider::before {
+    width: 11px;
+    height: 11px;
+  }
+
+  .toggle input:checked + .toggle-slider::before {
+    transform: translateX(13px);
+  }
+
+  .cpu-toggle-label {
+    font-size: 0.75rem;
+  }
+
+  .cpu-level-select {
+    font-size: 0.7rem;
+    padding: 1px 4px;
   }
 }
 
@@ -449,6 +757,7 @@ main {
   }
 
   .score-box {
+    flex: 1;
     font-size: 1rem;
     padding: 6px 10px;
   }
@@ -458,6 +767,7 @@ main {
   }
 
   .turn-area {
+    order: 2;
     flex-direction: row;
     align-items: center;
     gap: 8px;
@@ -472,8 +782,52 @@ main {
   }
 
   #reset-btn {
+    order: 3;
     padding: 10px 24px;
     font-size: 0.95rem;
     width: auto;
+  }
+
+  /* CPU settings モバイル */
+  .cpu-settings {
+    order: 4;
+    flex: 1 1 100%;
+    gap: 7px;
+  }
+
+  .cpu-settings-title {
+    font-size: 0.72rem;
+  }
+
+  .cpu-row {
+    padding: 7px 10px;
+    gap: 8px;
+  }
+
+  .cpu-player-icon {
+    font-size: 1.1rem;
+  }
+
+  .toggle {
+    width: 40px;
+    height: 22px;
+  }
+
+  .toggle-slider::before {
+    width: 16px;
+    height: 16px;
+  }
+
+  .toggle input:checked + .toggle-slider::before {
+    transform: translateX(18px);
+  }
+
+  .cpu-toggle-label {
+    font-size: 0.88rem;
+  }
+
+  .cpu-level-select {
+    font-size: 0.88rem;
+    padding: 4px 6px;
   }
 }
