@@ -46,17 +46,21 @@ document.getElementById("rematch-btn").addEventListener("click", () => {
 document.getElementById("black-cpu-toggle").addEventListener("change", (e) => {
   blackPlayerName = e.target.checked ? TYPE_CPU : TYPE_HUMAN;
   document.getElementById("black-cpu-level").disabled = !e.target.checked;
+  renderBoard();
 });
 
 document.getElementById("white-cpu-toggle").addEventListener("change", (e) => {
   whitePlayerName = e.target.checked ? TYPE_CPU : TYPE_HUMAN;
   document.getElementById("white-cpu-level").disabled = !e.target.checked;
+  renderBoard();
 });
 
 document.getElementById("black-cpu-level").addEventListener("change", (e) => {
   blackCpuType = parseInt(e.target.value, 10);
+  renderBoard();
 });
 
 document.getElementById("white-cpu-level").addEventListener("change", (e) => {
   whiteCpuType = parseInt(e.target.value, 10);
+  renderBoard();
 });
