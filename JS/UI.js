@@ -32,7 +32,7 @@ function renderBoard() {
 
   // 未実装レベル選択時のオーバーレイ
   const isUnavailable =
-    (blackPlayerName === TYPE_CPU && blackCpuType !== WEAK) || (whitePlayerName === TYPE_CPU && whiteCpuType !== WEAK);
+    (blackPlayerName === TYPE_CPU && blackCpuType === STRONG) || (whitePlayerName === TYPE_CPU && whiteCpuType === STRONG);
   if (isUnavailable) {
     const overlay = document.createElement("div");
     overlay.id = "cpu-unavailable-overlay";
