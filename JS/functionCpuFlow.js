@@ -51,6 +51,6 @@ function cpuTurn() {
       }
       playCpuMove(cpuType);
       proceedTurn();
-    }, 500);
+    }, 1000);
   }
 }
