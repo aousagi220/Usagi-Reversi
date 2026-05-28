@@ -113,3 +113,26 @@ function getValidMoves() {
   }
   return validMoves;
 }
+
+function countFlippableStones(x, y, player) {
+  const opponent = player === BLACK ? WHITE : BLACK;
+  let totalFlips = 0;
+
+  for (const [dx, dy] of DIRECTIONS) {
+    let nx = x + dx;
+    let ny = y + dy;
+    let flipsInDirection = 0;
+
+    while (isInsideBoard(nx, ny) && BOARD[nx][ny] === opponent) {
+      flipsInDirection++;
+      nx += dx;
+      ny += dy;
+    }
+
+    if (flipsInDirection > 0 && isInsideBoard(nx, ny) && BOARD[nx][ny] === player) {
+      totalFlips += flipsInDirection;
+    }
+  }
+
+  return totalFlips;
+}
