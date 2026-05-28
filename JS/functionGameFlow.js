@@ -5,6 +5,7 @@ function resetGame() {
   hiddenResultModal();
   window.clearTimeout(cpuTimerId);
   cpuTimerId = null;
+  cpuTurn();
 }
 
 function gameEnd() {
