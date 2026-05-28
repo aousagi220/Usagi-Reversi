@@ -47,12 +47,14 @@ document.getElementById("black-cpu-toggle").addEventListener("change", (e) => {
   blackPlayerName = e.target.checked ? TYPE_CPU : TYPE_HUMAN;
   document.getElementById("black-cpu-level").disabled = !e.target.checked;
   renderBoard();
+  if (e.target.checked && currentPlayer === BLACK) cpuTurn();
 });
 
 document.getElementById("white-cpu-toggle").addEventListener("change", (e) => {
   whitePlayerName = e.target.checked ? TYPE_CPU : TYPE_HUMAN;
   document.getElementById("white-cpu-level").disabled = !e.target.checked;
   renderBoard();
+  if (e.target.checked && currentPlayer === WHITE) cpuTurn();
 });
 
 document.getElementById("black-cpu-level").addEventListener("change", (e) => {
