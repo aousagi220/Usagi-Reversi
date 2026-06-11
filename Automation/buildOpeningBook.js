@@ -6,6 +6,7 @@ const {
 } = require("./database");
 
 const DEFAULT_OUTPUT_PATH = path.join(__dirname, "data", "openingBook.json");
+const DEFAULT_BROWSER_OUTPUT_PATH = path.join(__dirname, "..", "JS", "openingBookData.js");
 const DEFAULT_MAX_TURN = 16;
 const DEFAULT_MIN_SAMPLES = 5;
 
@@ -114,6 +115,17 @@ function writeOpeningBook(openingBook, outputPath = DEFAULT_OUTPUT_PATH) {
   fs.writeFileSync(outputPath, `${JSON.stringify(openingBook, null, 2)}\n`);
 }
 
+function writeBrowserOpeningBook(
+  openingBook,
+  outputPath = DEFAULT_BROWSER_OUTPUT_PATH,
+) {
+  fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+  fs.writeFileSync(
+    outputPath,
+    `const OPENING_BOOK = ${JSON.stringify(openingBook)};\n`,
+  );
+}
+
 if (require.main === module) {
   const maxTurn = Number(process.argv[2] ?? DEFAULT_MAX_TURN);
   const minSamples = Number(process.argv[3] ?? DEFAULT_MIN_SAMPLES);
@@ -121,19 +133,23 @@ if (require.main === module) {
   const openingBook = buildOpeningBook(database, { maxTurn, minSamples });
 
   writeOpeningBook(openingBook);
+  writeBrowserOpeningBook(openingBook);
   database.close();
 
   console.log(`定石局面数: ${openingBook.metadata.positionCount}`);
   console.log(`対象: ${maxTurn}手目まで / 最低${minSamples}サンプル`);
   console.log(`出力先: ${DEFAULT_OUTPUT_PATH}`);
+  console.log(`ブラウザ用: ${DEFAULT_BROWSER_OUTPUT_PATH}`);
 }
 
 module.exports = {
   DEFAULT_OUTPUT_PATH,
+  DEFAULT_BROWSER_OUTPUT_PATH,
   DEFAULT_MAX_TURN,
   DEFAULT_MIN_SAMPLES,
   collectOpeningBookRows,
   rowsToOpeningBook,
   buildOpeningBook,
   writeOpeningBook,
+  writeBrowserOpeningBook,
 };

@@ -13,6 +13,8 @@ const {
   WEAK,
   NORMAL,
   STRONG,
+  boardToKey,
+  selectOpeningMove,
   selectWeakMove,
   selectNormalMove,
   selectStrongMove,
@@ -84,6 +86,48 @@ test("強CPUは空いている角のXマスを避ける", () => {
   );
 
   assert.deepEqual(move, [2, 3]);
+});
+
+test("定石に該当する合法手を選ぶ", () => {
+  const board = createBoard();
+  const openingBook = {
+    positions: {
+      [`${BLACK}:${boardToKey(board)}`]: [
+        { x: 5, y: 4, score: 0.8 },
+        { x: 2, y: 3, score: 0.5 },
+      ],
+    },
+  };
+
+  assert.deepEqual(
+    selectOpeningMove(
+      board,
+      BLACK,
+      [
+        [2, 3],
+        [5, 4],
+      ],
+      openingBook,
+      () => 0,
+    ),
+    [5, 4],
+  );
+});
+
+test("定石の手が不正なら使用しない", () => {
+  const board = createBoard();
+  const openingBook = {
+    positions: {
+      [`${BLACK}:${boardToKey(board)}`]: [
+        { x: 0, y: 0, score: 1 },
+      ],
+    },
+  };
+
+  assert.equal(
+    selectOpeningMove(board, BLACK, [[2, 3]], openingBook),
+    null,
+  );
 });
 
 test("CPU戦略は盤面を変更しない", () => {

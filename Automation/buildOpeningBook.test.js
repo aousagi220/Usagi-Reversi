@@ -18,6 +18,7 @@ const {
 const {
   buildOpeningBook,
   writeOpeningBook,
+  writeBrowserOpeningBook,
 } = require("./buildOpeningBook");
 
 function createResult(winner) {
@@ -106,6 +107,24 @@ test("定石JSONをファイルへ出力できる", () => {
   assert.deepEqual(
     JSON.parse(fs.readFileSync(outputPath, "utf8")),
     openingBook,
+  );
+});
+
+test("ブラウザ用のJavaScriptを出力できる", () => {
+  const outputDirectory = fs.mkdtempSync(path.join(os.tmpdir(), "reversi-book-"));
+  const outputPath = path.join(outputDirectory, "openingBookData.js");
+  const openingBook = {
+    metadata: {
+      positionCount: 0,
+    },
+    positions: {},
+  };
+
+  writeBrowserOpeningBook(openingBook, outputPath);
+
+  assert.equal(
+    fs.readFileSync(outputPath, "utf8"),
+    `const OPENING_BOOK = ${JSON.stringify(openingBook)};\n`,
   );
 });
 

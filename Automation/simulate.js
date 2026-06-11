@@ -31,6 +31,7 @@ function simulateGame({
   blackCpu = STRONG,
   whiteCpu = NORMAL,
   random = Math.random,
+  openingBook = null,
 } = {}) {
   const board = createBoard();
   const moves = [];
@@ -40,7 +41,13 @@ function simulateGame({
   while (!isGameEnd(board)) {
     const cpuType = currentPlayer === BLACK ? blackCpu : whiteCpu;
     const boardBeforeMove = cloneBoard(board);
-    const move = selectCpuMove(board, currentPlayer, cpuType, random);
+    const move = selectCpuMove(
+      board,
+      currentPlayer,
+      cpuType,
+      random,
+      openingBook,
+    );
 
     if (move === null) {
       moves.push({

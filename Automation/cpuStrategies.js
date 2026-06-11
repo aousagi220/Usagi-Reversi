@@ -69,6 +69,36 @@ function selectRandomMove(moves, random = Math.random) {
   return moves[randomIndex];
 }
 
+function boardToKey(board) {
+  return board.flat().join("");
+}
+
+function selectOpeningMove(
+  board,
+  player,
+  validMoves,
+  openingBook,
+  random = Math.random,
+) {
+  if (!openingBook?.positions) return null;
+
+  const positionKey = `${player}:${boardToKey(board)}`;
+  const bookMoves = openingBook.positions[positionKey];
+  if (!bookMoves || bookMoves.length === 0) return null;
+
+  const validBookMoves = bookMoves.filter((bookMove) =>
+    validMoves.some(([x, y]) => x === bookMove.x && y === bookMove.y),
+  );
+  if (validBookMoves.length === 0) return null;
+
+  const bestScore = Math.max(...validBookMoves.map((move) => move.score));
+  const bestMoves = validBookMoves
+    .filter((move) => move.score === bestScore)
+    .map(({ x, y }) => [x, y]);
+
+  return selectRandomMove(bestMoves, random);
+}
+
 function selectWeakMove(validMoves, random = Math.random) {
   return selectRandomMove(validMoves, random);
 }
@@ -136,7 +166,13 @@ function selectStrongMove(board, player, validMoves, random = Math.random) {
   return selectRandomMove(bestMoves, random);
 }
 
-function selectCpuMove(board, player, cpuType, random = Math.random) {
+function selectCpuMove(
+  board,
+  player,
+  cpuType,
+  random = Math.random,
+  openingBook = null,
+) {
   const validMoves = getValidMoves(board, player);
 
   if (cpuType === WEAK) {
@@ -148,6 +184,15 @@ function selectCpuMove(board, player, cpuType, random = Math.random) {
   }
 
   if (cpuType === STRONG) {
+    const openingMove = selectOpeningMove(
+      board,
+      player,
+      validMoves,
+      openingBook,
+      random,
+    );
+    if (openingMove !== null) return openingMove;
+
     return selectStrongMove(board, player, validMoves, random);
   }
 
@@ -158,6 +203,8 @@ module.exports = {
   WEAK,
   NORMAL,
   STRONG,
+  boardToKey,
+  selectOpeningMove,
   selectWeakMove,
   selectNormalMove,
   selectStrongMove,

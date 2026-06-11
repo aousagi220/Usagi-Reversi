@@ -1,5 +1,28 @@
 let cpuTimerId = null;
 
+function boardToOpeningKey(board) {
+  return board.flat().join("");
+}
+
+function getOpeningMove(validMoves) {
+  if (typeof OPENING_BOOK === "undefined") return null;
+
+  const positionKey = `${currentPlayer}:${boardToOpeningKey(BOARD)}`;
+  const bookMoves = OPENING_BOOK.positions[positionKey];
+  if (!bookMoves || bookMoves.length === 0) return null;
+
+  const validBookMoves = bookMoves.filter((bookMove) =>
+    validMoves.some(([x, y]) => x === bookMove.x && y === bookMove.y),
+  );
+  if (validBookMoves.length === 0) return null;
+
+  const bestScore = Math.max(...validBookMoves.map((move) => move.score));
+  const bestMoves = validBookMoves.filter((move) => move.score === bestScore);
+  const randomIndex = Math.floor(Math.random() * bestMoves.length);
+
+  return bestMoves[randomIndex];
+}
+
 function playCpuMove(cpuType) {
   const validMoves = getValidMoves();
   if (validMoves.length === 0) return null;
@@ -40,6 +63,12 @@ function NormalMove(validMoves) {
 }
 
 function StrongMove(validMoves) {
+  const openingMove = getOpeningMove(validMoves);
+  if (openingMove !== null) {
+    placeStone(openingMove.x, openingMove.y, currentPlayer);
+    return;
+  }
+
   // 強いCPUのロジックを実装（例: 角を優先的に取る）
   let cpuflippableCount = [];
   const CORNER = [
