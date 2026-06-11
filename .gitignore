@@ -1,0 +1,3 @@
+Automation/data/*.db
+Automation/data/*.db-shm
+Automation/data/*.db-wal

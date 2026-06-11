@@ -1,0 +1,20 @@
+{
+  "name": "reversi",
+  "version": "1.0.0",
+  "description": "青うさぎが勉強用に作成した、JavaScriptで動くリバーシ（オセロ）です。 ブラウザだけで遊べます。",
+  "repository": {
+    "type": "git",
+    "url": "git@github-personal:aousagi220/Usagi-Reversi.git"
+  },
+  "license": "ISC",
+  "author": "",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "test": "node --test --test-isolation=none Automation/*.test.js",
+    "simulate": "node Automation/simulate.js",
+    "simulate:many": "node Automation/simulateMany.js",
+    "simulate:save": "node Automation/simulateMany.js 100 --save",
+    "book:build": "node Automation/buildOpeningBook.js"
+  }
+}
