@@ -49,3 +49,18 @@ test("対局数には正の整数だけ指定できる", () => {
 test("割合を表示用文字列へ変換できる", () => {
   assert.equal(formatPercent(0.625), "62.5%");
 });
+
+test("各試合終了時にコールバックを実行する", () => {
+  const results = [];
+
+  simulateMany({
+    gameCount: 3,
+    random: () => 0,
+    onGameComplete: (result, gameIndex) => {
+      results.push({ result, gameIndex });
+    },
+  });
+
+  assert.equal(results.length, 3);
+  assert.deepEqual(results.map(({ gameIndex }) => gameIndex), [0, 1, 2]);
+});

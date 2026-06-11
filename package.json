@@ -13,6 +13,8 @@
   "scripts": {
     "test": "node --test --test-isolation=none Automation/*.test.js",
     "simulate": "node Automation/simulate.js",
-    "simulate:many": "node Automation/simulateMany.js"
+    "simulate:many": "node Automation/simulateMany.js",
+    "simulate:save": "node Automation/simulateMany.js 100 --save",
+    "book:build": "node Automation/buildOpeningBook.js"
   }
 }

@@ -58,6 +58,7 @@ function simulateMany({
   cpuB = NORMAL,
   gameCount = 100,
   random = Math.random,
+  onGameComplete = null,
 } = {}) {
   if (!Number.isInteger(gameCount) || gameCount <= 0) {
     throw new Error("gameCount must be a positive integer");
@@ -74,6 +75,10 @@ function simulateMany({
     });
 
     recordResult(stats, result, cpuAColor);
+
+    if (onGameComplete !== null) {
+      onGameComplete(result, gameIndex);
+    }
   }
 
   return {
@@ -111,8 +116,25 @@ function printStats(stats) {
 
 if (require.main === module) {
   const gameCount = Number(process.argv[2] ?? 100);
-  const stats = simulateMany({ gameCount });
+  const shouldSave = process.argv.includes("--save");
+  let database = null;
+  let onGameComplete = null;
+
+  if (shouldSave) {
+    const {
+      DEFAULT_DATABASE_PATH,
+      openDatabase,
+      saveGame,
+    } = require("./database");
+
+    database = openDatabase();
+    onGameComplete = (result) => saveGame(database, result);
+    console.log(`保存先: ${DEFAULT_DATABASE_PATH}`);
+  }
+
+  const stats = simulateMany({ gameCount, onGameComplete });
   printStats(stats);
+  database?.close();
 }
 
 module.exports = {
