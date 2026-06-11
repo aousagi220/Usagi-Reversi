@@ -11,10 +11,13 @@
   "type": "commonjs",
   "main": "index.js",
   "scripts": {
-    "test": "node --test --test-isolation=none Automation/*.test.js",
+    "test": "node --test --test-isolation=none Automation/*.test.js AITraining/*.test.js",
     "simulate": "node Automation/simulate.js",
     "simulate:many": "node Automation/simulateMany.js",
     "simulate:save": "node Automation/simulateMany.js 100 --save",
-    "book:build": "node Automation/buildOpeningBook.js"
+    "book:build": "node Automation/buildOpeningBook.js",
+    "ai:evaluate": "node AITraining/trainingSimulator.js",
+    "ai:train": "node AITraining/trainer.js",
+    "ai:train:resume": "node AITraining/trainer.js --resume"
   }
 }

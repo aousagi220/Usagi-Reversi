@@ -4,6 +4,7 @@
 ブラウザだけで遊べます。
 
 ## 実行方法
+
 1. 右上の `<> Code` より、`Download ZIP` を行ってください。
 2. ZIPファイルを解凍してください。
 3. `index.html` を Chrome などのブラウザで開いてください。
@@ -12,7 +13,13 @@
 
 https://aousagi220.github.io/Usagi-Reversi/
 
+## ドキュメント
+
+- テスト方法と学習方法: [docs/TEST_AND_TRAINING.md](docs/TEST_AND_TRAINING.md)
+- プロジェクト概要: [docs/PROJECT_OVERVIEW.md](docs/PROJECT_OVERVIEW.md)
+
 ## 機能
+
 - 石の配置・反転・ターン管理などリバーシの基本ルールに対応
 - 置けるマスの緑色ハイライト表示
 - 黒・白の石数をリアルタイムでスコアパネルに表示
@@ -24,6 +31,7 @@ https://aousagi220.github.io/Usagi-Reversi/
 - デスクトップ・タブレット・モバイルに対応したレスポンシブUI
 
 ## CPUについて
+
 - 弱いCPU: 実装済み。置けるマスからランダムに選びます。
 - 普通CPU: 実装済み。置けるマスの中から最も多く石を取れる手を選びます。
 - 強いCPU: 未実装です。
