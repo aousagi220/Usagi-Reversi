@@ -5,7 +5,12 @@ const os = require("node:os");
 const path = require("node:path");
 
 const { createNeuralModel } = require("./evaluator");
-const { calculateFitness, train, resolveTrainingStart } = require("./trainer");
+const {
+  calculateFitness,
+  train,
+  trainParallel,
+  resolveTrainingStart,
+} = require("./trainer");
 
 test("勝率・引き分け・平均石差から適応度を計算する", () => {
   assert.equal(
@@ -168,4 +173,29 @@ test("小規模NNモデルでも学習できる", () => {
   });
 
   assert.equal(result.best.model.type, "nn");
+});
+
+test("非同期評価で複数個体を学習できる", async () => {
+  const result = await trainParallel({
+    populationSize: 3,
+    generationCount: 2,
+    workerCount: 2,
+    localSearchEliteCount: 0,
+    random: () => 0.25,
+    evaluateModel: async (model) => ({
+      fitness: model.opening.cornerDifference,
+      stats: {},
+    }),
+    outputPath: path.join(os.tmpdir(), "reversi-parallel-best.json"),
+  });
+
+  assert.equal(result.history.length, 2);
+  assert.equal(Number.isFinite(result.best.fitness), true);
+});
+
+test("並列数には正の整数だけ指定できる", async () => {
+  await assert.rejects(
+    () => trainParallel({ workerCount: 0 }),
+    /workerCount must be a positive integer/,
+  );
 });

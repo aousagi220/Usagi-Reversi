@@ -12,12 +12,15 @@ const {
 const {
   createInitialPopulation,
   evaluatePopulation,
+  evaluatePopulationAsync,
   getModelParameters,
   improvePopulationWithLocalSearch,
+  improvePopulationWithLocalSearchAsync,
   createNextGeneration,
 } = require("./geneticAlgorithm");
 const { loadOpeningBook } = require("./trainingSimulator");
 const { DEFAULT_OPPONENT_MIX, simulateMixedMatches } = require("./mixedEvaluation");
+const { TrainingWorkerPool, validateWorkerCount } = require("./trainingWorkerPool");
 
 const DEFAULT_BEST_MODEL_PATH = path.join(__dirname, "models", "bestModel.json");
 
@@ -174,6 +177,136 @@ function train({
   };
 }
 
+async function trainParallel({
+  populationSize = 8,
+  generationCount = 3,
+  gamesPerModel = 10,
+  searchDepth = 1,
+  endgameThreshold = 0,
+  opponentMix = DEFAULT_OPPONENT_MIX,
+  random = Math.random,
+  openingBook = loadOpeningBook(),
+  outputPath = DEFAULT_BEST_MODEL_PATH,
+  baseModel = DEFAULT_MODEL,
+  hallOfFameModels = [baseModel],
+  startGeneration = 1,
+  previousBest = null,
+  localSearchEliteCount = 1,
+  localSearchCoordinateCount = 4,
+  localSearchStrength = 0.1,
+  workerCount = 2,
+  evaluateModel = null,
+  onGenerationComplete = null,
+} = {}) {
+  validateWorkerCount(workerCount);
+  if (!Number.isInteger(generationCount) || generationCount <= 0) {
+    throw new Error("generationCount must be a positive integer");
+  }
+  if (!Number.isInteger(searchDepth) || searchDepth <= 0) {
+    throw new Error("searchDepth must be a positive integer");
+  }
+  if (!Number.isInteger(endgameThreshold) || endgameThreshold < 0 || endgameThreshold > 60) {
+    throw new Error("endgameThreshold must be an integer between 0 and 60");
+  }
+  if (!Number.isInteger(startGeneration) || startGeneration <= 0) {
+    throw new Error("startGeneration must be a positive integer");
+  }
+  if (!Number.isInteger(localSearchEliteCount) || localSearchEliteCount < 0 || localSearchEliteCount > populationSize) {
+    throw new Error("localSearchEliteCount must be between 0 and populationSize");
+  }
+  const parameterCount = getModelParameters(baseModel).length;
+  if (
+    !Number.isInteger(localSearchCoordinateCount) ||
+    localSearchCoordinateCount < 0 ||
+    localSearchCoordinateCount > parameterCount
+  ) {
+    throw new Error(`localSearchCoordinateCount must be an integer between 0 and ${parameterCount}`);
+  }
+  if (!Number.isFinite(localSearchStrength) || localSearchStrength < 0) {
+    throw new Error("localSearchStrength must be a non-negative number");
+  }
+
+  const workerPool = evaluateModel === null ? new TrainingWorkerPool(workerCount) : null;
+  const evaluator = evaluateModel ?? (async (model) => {
+    const stats = await workerPool.evaluate(model, {
+      hallOfFameModels,
+      gameCount: gamesPerModel,
+      searchDepth,
+      endgameThreshold,
+      opponentMix,
+      openingBook,
+    });
+    return {
+      fitness: calculateFitness(stats),
+      stats,
+    };
+  });
+
+  let population = createInitialPopulation({
+    populationSize,
+    baseModel,
+    random,
+  });
+  let bestOverall = previousBest
+    ? {
+        ...previousBest,
+        model: { ...previousBest.model },
+      }
+    : null;
+  const history = [];
+
+  try {
+    for (let generationIndex = 0; generationIndex < generationCount; generationIndex++) {
+      const generation = startGeneration + generationIndex;
+      const evaluatedPopulation = await evaluatePopulationAsync(population, evaluator);
+      const rankedPopulation = await improvePopulationWithLocalSearchAsync(
+        evaluatedPopulation,
+        evaluator,
+        {
+          eliteCount: localSearchEliteCount,
+          coordinateCount: localSearchCoordinateCount,
+          coordinateOffset: generationIndex * localSearchCoordinateCount,
+          strength: localSearchStrength,
+        },
+      );
+      const best = rankedPopulation[0];
+
+      if (bestOverall === null || best.fitness > bestOverall.fitness) {
+        bestOverall = {
+          ...best,
+          model: { ...best.model },
+        };
+        writeBestModel(bestOverall, generation, outputPath);
+      }
+
+      const generationResult = {
+        generation,
+        bestFitness: best.fitness,
+        averageFitness:
+          rankedPopulation.reduce((sum, individual) => sum + individual.fitness, 0) /
+          rankedPopulation.length,
+        bestModel: { ...best.model },
+      };
+      history.push(generationResult);
+      await onGenerationComplete?.(generationResult, rankedPopulation);
+
+      if (generationIndex < generationCount - 1) {
+        population = createNextGeneration(rankedPopulation, {
+          populationSize,
+          random,
+        });
+      }
+    }
+  } finally {
+    await workerPool?.close();
+  }
+
+  return {
+    best: bestOverall,
+    history,
+  };
+}
+
 function printGeneration(result) {
   console.log(
     `世代${result.generation}: best=${result.bestFitness.toFixed(2)} average=${result.averageFitness.toFixed(2)}`,
@@ -241,7 +374,7 @@ function resolveTrainingStart({ shouldResume, storedBest, fileBest, latestGenera
   };
 }
 
-if (require.main === module) {
+async function runCommandLine() {
   const commandArguments = process.argv.slice(2);
   const positionalArguments = commandArguments.filter((argument) => !argument.startsWith("--"));
   const generationCount = Number(positionalArguments[0] ?? 3);
@@ -276,6 +409,11 @@ if (require.main === module) {
   if (modelType !== "linear" && modelType !== "nn") {
     throw new Error("model-type must be linear or nn");
   }
+  const workerCountArgument = commandArguments.find((argument) => argument.startsWith("--workers="));
+  const workerCount = workerCountArgument
+    ? Number(workerCountArgument.slice("--workers=".length))
+    : 1;
+  validateWorkerCount(workerCount);
   const shouldResume = commandArguments.includes("--resume");
 
   const {
@@ -333,6 +471,7 @@ if (require.main === module) {
   console.log(`終盤完全読み: ${endgameThreshold === 0 ? "無効" : `残り${endgameThreshold}マス以下`}`);
   console.log(`Hall of Fame: ${hallOfFameModels.length}モデル`);
   console.log(`評価モデル: ${isNeuralModel(baseModel) ? "小規模NN" : "線形"}`);
+  console.log(`評価ワーカー: ${workerCount}`);
   console.log(
     `局所探索: 上位${localSearchEliteCount}体 / ${localSearchCoordinateCount}座標 / 強度${localSearchStrength}`,
   );
@@ -340,7 +479,7 @@ if (require.main === module) {
   let result;
 
   try {
-    result = train({
+    const trainingOptions = {
       generationCount,
       populationSize,
       gamesPerModel,
@@ -361,7 +500,10 @@ if (require.main === module) {
           rankedPopulation,
         });
       },
-    });
+    };
+    result = workerCount > 1
+      ? await trainParallel({ ...trainingOptions, workerCount })
+      : train(trainingOptions);
     completeTrainingRun(database, runId);
   } finally {
     database.close();
@@ -372,11 +514,19 @@ if (require.main === module) {
   console.log(`最良適応度: ${result.best.fitness.toFixed(2)}`);
 }
 
+if (require.main === module) {
+  runCommandLine().catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+  });
+}
+
 module.exports = {
   DEFAULT_BEST_MODEL_PATH,
   calculateFitness,
   writeBestModel,
   train,
+  trainParallel,
   printGeneration,
   resolveTrainingStart,
 };

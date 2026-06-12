@@ -5,7 +5,11 @@ const os = require("node:os");
 const path = require("node:path");
 
 const { FEATURE_NAMES, PHASE_NAMES, createNeuralModel } = require("./evaluator");
-const { normalizeRemoteJob, runRemoteTraining } = require("./remoteTrainingRunner");
+const {
+  normalizeRemoteJob,
+  runRemoteTraining,
+  runRemoteTrainingParallel,
+} = require("./remoteTrainingRunner");
 
 test("リモート学習ジョブに既定値を設定する", () => {
   const job = normalizeRemoteJob({ jobId: "job-1", config: {} });
@@ -15,6 +19,7 @@ test("リモート学習ジョブに既定値を設定する", () => {
   assert.equal(job.config.localSearchEliteCount, 1);
   assert.equal(job.config.localSearchCoordinateCount, 4);
   assert.equal(job.config.localSearchStrength, 0.1);
+  assert.equal(job.config.workerCount, 1);
   assert.deepEqual(Object.keys(job.config.baseModel), PHASE_NAMES);
   assert.deepEqual(Object.keys(job.config.baseModel.opening), FEATURE_NAMES);
 });
@@ -71,4 +76,40 @@ test("リモートNN学習は216座標まで局所探索できる", () => {
       }),
     /localSearchCoordinateCount must be an integer between 0 and 216/,
   );
+});
+
+test("リモートジョブへ評価ワーカー数を設定できる", () => {
+  const job = normalizeRemoteJob({
+    jobId: "job-workers",
+    config: { workerCount: 4 },
+  });
+
+  assert.equal(job.config.workerCount, 4);
+  assert.throws(
+    () => normalizeRemoteJob({ jobId: "job-invalid-workers", config: { workerCount: 0 } }),
+    /workerCount must be a positive integer/,
+  );
+});
+
+test("リモート学習を複数ワーカーで実行できる", async () => {
+  const outputDirectory = fs.mkdtempSync(path.join(os.tmpdir(), "reversi-remote-parallel-"));
+  const payload = await runRemoteTrainingParallel(
+    {
+      jobId: "job-parallel",
+      config: {
+        populationSize: 2,
+        generationCount: 1,
+        gamesPerModel: 1,
+        searchDepth: 1,
+        endgameThreshold: 0,
+        localSearchEliteCount: 0,
+        workerCount: 2,
+      },
+    },
+    { outputPath: path.join(outputDirectory, "bestModel.json") },
+  );
+
+  assert.equal(payload.jobId, "job-parallel");
+  assert.equal(payload.generations.length, 1);
+  assert.equal(payload.generations[0].rankedPopulation.length, 2);
 });

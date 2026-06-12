@@ -80,6 +80,7 @@ npm run ai:train -- 20 24 40 \
 ```bash
 npm run ai:train -- 30 32 40 \
   --model-type=nn \
+  --workers=4 \
   --search-depth=2 \
   --endgame-threshold=8 \
   --local-search-coordinates=4
@@ -92,6 +93,10 @@ NNは序盤・中盤・終盤で別パラメータを持ち、合計216パラメ
 `--model-type=nn` は新規学習時に使用します。既存線形モデルの続きから
 NNへ切り替える場合は `--resume` を付けず、新しい学習として開始してください。
 線形評価へ戻す場合は `--model-type=linear` を指定するか省略します。
+
+`--workers=N` を指定すると、個体ごとの対局評価をNode.jsの
+`worker_threads`へ分散します。物理CPUコア数以下を目安にしてください。
+指定を省略した場合は1ワーカーで従来どおり実行します。
 
 前回のSQLite履歴から再開する場合:
 
@@ -110,6 +115,8 @@ npm run ai:train:resume -- 20 16 40 --search-depth=3 --endgame-threshold=10
 
 ローカルPCをモデルとSQLite履歴の保存先、Colabを計算ワーカーとして使用します。
 現在の学習処理はJavaScriptのCPU計算であり、ColabのGPUは使用しません。
+ColabのCPUコア数に合わせて `--workers=2` などを指定すると、複数個体を
+並列評価できます。
 
 ### 1. 共有トークンを作る
 
@@ -129,6 +136,7 @@ printf '%s\n' "$REMOTE_TRAINING_TOKEN"
 ```bash
 npm run ai:remote:server -- 20 16 40 \
   --model-type=nn \
+  --workers=2 \
   --search-depth=2 \
   --endgame-threshold=8 \
   --local-search-elites=1 \
@@ -140,6 +148,7 @@ SQLiteの続きから再開:
 
 ```bash
 npm run ai:remote:server -- 20 16 40 \
+  --workers=2 \
   --search-depth=2 \
   --endgame-threshold=8 \
   --local-search-elites=1 \

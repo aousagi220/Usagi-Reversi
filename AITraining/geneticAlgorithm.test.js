@@ -15,6 +15,7 @@ const {
   createInitialPopulation,
   evaluatePopulation,
   improveIndividualWithLocalSearch,
+  improveIndividualWithLocalSearchAsync,
   getModelParameters,
   createNextGeneration,
 } = require("./geneticAlgorithm");
@@ -140,6 +141,28 @@ test("局所探索で改善しなければ元の個体を維持する", () => {
 
   assert.deepEqual(improved.model, DEFAULT_MODEL);
   assert.deepEqual(improved.stats, { source: "original" });
+});
+
+test("非同期局所探索で改善する方向の重みを採用する", async () => {
+  const model = createModel({ opening: { stoneDifference: 10 } });
+  const improved = await improveIndividualWithLocalSearchAsync(
+    {
+      model,
+      fitness: -1,
+      stats: {},
+    },
+    async (candidate) => ({
+      fitness: -Math.abs(candidate.opening.stoneDifference - 11),
+      stats: {},
+    }),
+    {
+      coordinateCount: 1,
+      strength: 0.1,
+    },
+  );
+
+  assert.equal(improved.model.opening.stoneDifference, 11);
+  assert.ok(improved.fitness === 0);
 });
 
 test("小規模NNの216パラメータをGAで操作できる", () => {

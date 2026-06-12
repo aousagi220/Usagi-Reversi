@@ -143,6 +143,7 @@ function createRemoteJob({
   localSearchEliteCount,
   localSearchCoordinateCount,
   localSearchStrength,
+  workerCount,
   modelType = "linear",
   shouldResume,
   database,
@@ -181,6 +182,7 @@ function createRemoteJob({
       localSearchEliteCount,
       localSearchCoordinateCount,
       localSearchStrength,
+      workerCount,
       modelType,
       baseModel,
       hallOfFameModels,
@@ -377,6 +379,7 @@ function parseServerArguments(commandArguments) {
     localSearchEliteCount: valueOf("local-search-elites", 1),
     localSearchCoordinateCount: valueOf("local-search-coordinates", 4),
     localSearchStrength: valueOf("local-search-strength", 0.1),
+    workerCount: valueOf("workers", 1),
     modelType:
       commandArguments.find((entry) => entry.startsWith("--model-type="))
         ?.slice("--model-type=".length) ?? "linear",
@@ -411,6 +414,7 @@ if (require.main === module) {
       `${options.localSearchCoordinateCount}座標 / 強度${options.localSearchStrength}`,
     );
     console.log(`評価モデル: ${options.modelType === "nn" ? "小規模NN" : "線形"}`);
+    console.log(`評価ワーカー: ${options.workerCount}`);
   });
 
   function shutdown() {

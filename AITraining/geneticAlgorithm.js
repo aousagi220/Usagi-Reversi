@@ -146,6 +146,25 @@ function evaluatePopulation(population, evaluateModel) {
     .sort((first, second) => second.fitness - first.fitness);
 }
 
+async function evaluatePopulationAsync(population, evaluateModel) {
+  if (typeof evaluateModel !== "function") {
+    throw new TypeError("evaluateModel must be a function");
+  }
+
+  const evaluatedPopulation = await Promise.all(
+    population.map(async (model, index) => {
+      validateModel(model);
+      const normalizedModel = normalizeModel(model);
+      const evaluation = await evaluateModel(normalizedModel, index);
+      if (!Number.isFinite(evaluation.fitness)) {
+        throw new TypeError("fitness must be a finite number");
+      }
+      return { model: normalizedModel, ...evaluation };
+    }),
+  );
+  return evaluatedPopulation.sort((first, second) => second.fitness - first.fitness);
+}
+
 function createCoordinateCandidate(model, path, delta) {
   const candidate = normalizeModel(model);
   setPathValue(candidate, path, getPathValue(candidate, path) + delta);
@@ -223,6 +242,82 @@ function improvePopulationWithLocalSearch(
     .sort((first, second) => second.fitness - first.fitness);
 }
 
+async function improveIndividualWithLocalSearchAsync(
+  individual,
+  evaluateModel,
+  {
+    coordinateCount = 4,
+    coordinateOffset = 0,
+    strength = 0.1,
+  } = {},
+) {
+  if (!Number.isInteger(coordinateCount) || coordinateCount < 0) {
+    throw new Error("coordinateCount must be a non-negative integer");
+  }
+  if (!Number.isInteger(coordinateOffset) || coordinateOffset < 0) {
+    throw new Error("coordinateOffset must be a non-negative integer");
+  }
+  if (!Number.isFinite(strength) || strength < 0) {
+    throw new Error("local search strength must be a non-negative number");
+  }
+
+  const coordinates = getModelParameters(individual.model);
+  let best = { ...individual, model: normalizeModel(individual.model) };
+
+  for (let index = 0; index < Math.min(coordinateCount, coordinates.length); index++) {
+    const { path } = coordinates[(coordinateOffset + index) % coordinates.length];
+    const baseModel = best.model;
+    const weight = getPathValue(baseModel, path);
+    const step = Math.max(Math.abs(weight), 0.1) * strength;
+    const candidateModels = [1, -1].map((direction) =>
+      createCoordinateCandidate(baseModel, path, step * direction),
+    );
+    const evaluations = await Promise.all(
+      candidateModels.map((candidateModel) => evaluateModel(candidateModel)),
+    );
+
+    evaluations.forEach((evaluation, candidateIndex) => {
+      if (!Number.isFinite(evaluation.fitness)) {
+        throw new TypeError("fitness must be a finite number");
+      }
+      if (evaluation.fitness > best.fitness) {
+        best = {
+          model: candidateModels[candidateIndex],
+          ...evaluation,
+        };
+      }
+    });
+  }
+  return best;
+}
+
+async function improvePopulationWithLocalSearchAsync(
+  rankedPopulation,
+  evaluateModel,
+  {
+    eliteCount = 1,
+    coordinateCount = 4,
+    coordinateOffset = 0,
+    strength = 0.1,
+  } = {},
+) {
+  if (!Number.isInteger(eliteCount) || eliteCount < 0 || eliteCount > rankedPopulation.length) {
+    throw new Error("local search eliteCount must be between 0 and population size");
+  }
+
+  const improvedElites = await Promise.all(
+    rankedPopulation.slice(0, eliteCount).map((individual) =>
+      improveIndividualWithLocalSearchAsync(individual, evaluateModel, {
+        coordinateCount,
+        coordinateOffset,
+        strength,
+      }),
+    ),
+  );
+  return [...improvedElites, ...rankedPopulation.slice(eliteCount)]
+    .sort((first, second) => second.fitness - first.fitness);
+}
+
 function selectParent(rankedPopulation, selectionPoolSize, random = Math.random) {
   const poolSize = Math.min(selectionPoolSize, rankedPopulation.length);
   return rankedPopulation[Math.floor(random() * poolSize)].model;
@@ -269,7 +364,10 @@ module.exports = {
   mutateModel,
   createInitialPopulation,
   evaluatePopulation,
+  evaluatePopulationAsync,
   improveIndividualWithLocalSearch,
+  improveIndividualWithLocalSearchAsync,
   improvePopulationWithLocalSearch,
+  improvePopulationWithLocalSearchAsync,
   createNextGeneration,
 };

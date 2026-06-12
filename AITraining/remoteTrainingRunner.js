@@ -9,7 +9,8 @@ const {
 } = require("./evaluator");
 const { getModelParameters } = require("./geneticAlgorithm");
 const { DEFAULT_OPPONENT_MIX } = require("./mixedEvaluation");
-const { train } = require("./trainer");
+const { train, trainParallel } = require("./trainer");
+const { validateWorkerCount } = require("./trainingWorkerPool");
 
 const REMOTE_TRAINING_PROTOCOL_VERSION = 1;
 
@@ -43,6 +44,7 @@ function normalizeRemoteJob(job) {
       localSearchEliteCount: config.localSearchEliteCount ?? 1,
       localSearchCoordinateCount: config.localSearchCoordinateCount ?? 4,
       localSearchStrength: config.localSearchStrength ?? 0.1,
+      workerCount: config.workerCount ?? 1,
       opponentMix: config.opponentMix ?? DEFAULT_OPPONENT_MIX,
       baseModel: normalizeModel(configuredBaseModel),
       hallOfFameModels: (config.hallOfFameModels ?? [configuredBaseModel])
@@ -62,6 +64,7 @@ function normalizeRemoteJob(job) {
   validatePositiveInteger(normalizedJob.config.gamesPerModel, "gamesPerModel");
   validatePositiveInteger(normalizedJob.config.searchDepth, "searchDepth");
   validatePositiveInteger(normalizedJob.config.startGeneration, "startGeneration");
+  validateWorkerCount(normalizedJob.config.workerCount);
   const parameterCount = getModelParameters(normalizedJob.config.baseModel).length;
   if (
     !Number.isInteger(normalizedJob.config.localSearchEliteCount) ||
@@ -143,22 +146,77 @@ function runRemoteTraining(job, { outputPath } = {}) {
   };
 }
 
-if (require.main === module) {
-  const [jobPath, resultPath] = process.argv.slice(2);
-  if (!jobPath || !resultPath) {
-    throw new Error("Usage: node AITraining/remoteTrainingRunner.js JOB_JSON RESULT_JSON");
-  }
+async function runRemoteTrainingParallel(job, { outputPath } = {}) {
+  const normalizedJob = normalizeRemoteJob(job);
+  const generations = [];
+  const bestModelPath = outputPath ?? path.join(__dirname, "models", "remoteBestModel.json");
+  let bestFitness = normalizedJob.config.previousBest?.fitness ?? -Infinity;
+  let bestGeneration = normalizedJob.config.previousBest?.generation ?? null;
 
-  const job = JSON.parse(fs.readFileSync(jobPath, "utf8"));
-  const payload = runRemoteTraining(job, {
-    outputPath: path.join(path.dirname(resultPath), "bestModel.json"),
+  const result = await trainParallel({
+    ...normalizedJob.config,
+    outputPath: bestModelPath,
+    onGenerationComplete: (generationResult, rankedPopulation) => {
+      if (generationResult.bestFitness > bestFitness) {
+        bestFitness = generationResult.bestFitness;
+        bestGeneration = generationResult.generation;
+      }
+      generations.push({
+        ...generationResult,
+        rankedPopulation: rankedPopulation.map((individual) => ({
+          ...individual,
+          model: normalizeModel(individual.model),
+        })),
+      });
+      console.log(
+        `世代${generationResult.generation}: best=${generationResult.bestFitness.toFixed(2)} ` +
+        `average=${generationResult.averageFitness.toFixed(2)}`,
+      );
+    },
   });
-  fs.writeFileSync(resultPath, `${JSON.stringify(payload)}\n`);
-  console.log(`リモート学習結果: ${resultPath}`);
+
+  return {
+    protocolVersion: REMOTE_TRAINING_PROTOCOL_VERSION,
+    jobId: normalizedJob.jobId,
+    completedAt: new Date().toISOString(),
+    result: {
+      bestGeneration,
+      best: {
+        ...result.best,
+        model: normalizeModel(result.best.model),
+      },
+      history: result.history,
+    },
+    generations,
+  };
+}
+
+if (require.main === module) {
+  (async () => {
+    const [jobPath, resultPath] = process.argv.slice(2);
+    if (!jobPath || !resultPath) {
+      throw new Error("Usage: node AITraining/remoteTrainingRunner.js JOB_JSON RESULT_JSON");
+    }
+
+    const job = JSON.parse(fs.readFileSync(jobPath, "utf8"));
+    const normalizedJob = normalizeRemoteJob(job);
+    const options = {
+      outputPath: path.join(path.dirname(resultPath), "bestModel.json"),
+    };
+    const payload = normalizedJob.config.workerCount > 1
+      ? await runRemoteTrainingParallel(normalizedJob, options)
+      : runRemoteTraining(normalizedJob, options);
+    fs.writeFileSync(resultPath, `${JSON.stringify(payload)}\n`);
+    console.log(`リモート学習結果: ${resultPath}`);
+  })().catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+  });
 }
 
 module.exports = {
   REMOTE_TRAINING_PROTOCOL_VERSION,
   normalizeRemoteJob,
   runRemoteTraining,
+  runRemoteTrainingParallel,
 };
