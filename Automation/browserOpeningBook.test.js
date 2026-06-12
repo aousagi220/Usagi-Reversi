@@ -51,6 +51,18 @@ test("ブラウザ版の強CPUが生成済み定石を参照できる", () => {
   );
   vm.runInContext(openingBookScript, context);
   vm.runInContext(cpuFlowScript, context);
+  vm.runInContext(
+    `
+      {
+        const canonical = canonicalizeOpeningBoard(BOARD);
+        const [x, y] = transformOpeningCoordinate([2, 3], canonical.transform);
+        OPENING_BOOK.positions[\`\${BLACK}:\${canonical.key}\`] = [
+          { x, y, score: 1 },
+        ];
+      }
+    `,
+    context,
+  );
 
   const move = vm.runInContext(
     "getOpeningMove([[2, 3], [3, 2], [4, 5], [5, 4]])",

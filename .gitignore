@@ -1,3 +1,9 @@
 Automation/data/*.db
 Automation/data/*.db-shm
 Automation/data/*.db-wal
+AITraining/data/*.db
+AITraining/data/*.db-shm
+AITraining/data/*.db-wal
+AITraining/models/history/
+__pycache__/
+*.pyc

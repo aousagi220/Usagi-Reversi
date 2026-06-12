@@ -7,6 +7,7 @@ const BOARD_SIZE = 8;
 const WEAK = 0;
 const NORMAL = 1;
 const STRONG = 2;
+const TRAINED = 3;
 document.documentElement.style.setProperty("--board-size", BOARD_SIZE);
 
 let currentPlayer = BLACK;

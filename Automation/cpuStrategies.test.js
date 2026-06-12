@@ -20,6 +20,10 @@ const {
   selectStrongMove,
   selectCpuMove,
 } = require("./cpuStrategies");
+const {
+  canonicalizeBoard,
+  transformCoordinate,
+} = require("./boardSymmetry");
 
 test("弱CPUは乱数に対応する合法手を選ぶ", () => {
   const validMoves = [
@@ -110,6 +114,24 @@ test("定石に該当する合法手を選ぶ", () => {
       openingBook,
       () => 0,
     ),
+    [5, 4],
+  );
+});
+
+test("正規化された定石手を元の盤面座標へ戻す", () => {
+  const board = createBoard();
+  const canonical = canonicalizeBoard(board);
+  const [bookX, bookY] = transformCoordinate([5, 4], canonical.transform);
+  const openingBook = {
+    positions: {
+      [`${BLACK}:${canonical.key}`]: [
+        { x: bookX, y: bookY, score: 1 },
+      ],
+    },
+  };
+
+  assert.deepEqual(
+    selectOpeningMove(board, BLACK, [[5, 4]], openingBook, () => 0),
     [5, 4],
   );
 });
