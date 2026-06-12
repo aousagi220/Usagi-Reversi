@@ -5,6 +5,7 @@ const {
   FEATURE_NAMES,
   PHASE_NAMES,
   DEFAULT_MODEL,
+  createNeuralModel,
   createModel,
 } = require("./evaluator");
 const {
@@ -13,6 +14,8 @@ const {
   mutateModel,
   createInitialPopulation,
   evaluatePopulation,
+  improveIndividualWithLocalSearch,
+  getModelParameters,
   createNextGeneration,
 } = require("./geneticAlgorithm");
 
@@ -99,4 +102,64 @@ test("エリートを保ったまま次世代を生成する", () => {
   assert.equal(nextGeneration.length, 4);
   assert.deepEqual(nextGeneration[0], rankedPopulation[0].model);
   assert.deepEqual(nextGeneration[1], rankedPopulation[1].model);
+});
+
+test("座標降下で適応度が改善する方向の重みを採用する", () => {
+  const model = createModel({ opening: { stoneDifference: 10 } });
+  const individual = {
+    model,
+    fitness: -1,
+  };
+  const improved = improveIndividualWithLocalSearch(
+    individual,
+    (candidate) => ({
+      fitness: -Math.abs(candidate.opening.stoneDifference - 11),
+    }),
+    {
+      coordinateCount: 1,
+      coordinateOffset: 0,
+      strength: 0.1,
+    },
+  );
+
+  assert.equal(improved.model.opening.stoneDifference, 11);
+  assert.equal(Math.abs(improved.fitness), 0);
+});
+
+test("局所探索で改善しなければ元の個体を維持する", () => {
+  const individual = {
+    model: DEFAULT_MODEL,
+    fitness: 100,
+    stats: { source: "original" },
+  };
+  const improved = improveIndividualWithLocalSearch(
+    individual,
+    () => ({ fitness: 99 }),
+    { coordinateCount: 2 },
+  );
+
+  assert.deepEqual(improved.model, DEFAULT_MODEL);
+  assert.deepEqual(improved.stats, { source: "original" });
+});
+
+test("小規模NNの216パラメータをGAで操作できる", () => {
+  const firstParent = createNeuralModel({ random: () => 0.25 });
+  const secondParent = createNeuralModel({ random: () => 0.75 });
+
+  assert.equal(getModelParameters(firstParent).length, 216);
+  assert.deepEqual(
+    crossoverModels(firstParent, secondParent, () => 0),
+    firstParent,
+  );
+  assert.deepEqual(
+    mutateModel(firstParent, { mutationRate: 0 }),
+    firstParent,
+  );
+});
+
+test("異なる評価アーキテクチャ同士は交叉しない", () => {
+  assert.throws(
+    () => crossoverModels(DEFAULT_MODEL, createNeuralModel()),
+    /same architecture/,
+  );
 });

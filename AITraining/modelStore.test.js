@@ -10,6 +10,7 @@ const {
   completeTrainingRun,
   getLatestGenerationNumber,
   getBestStoredModel,
+  getHallOfFameModels,
   getTrainingCounts,
 } = require("./modelStore");
 
@@ -58,5 +59,33 @@ test("履歴がなければ最良モデルはnullを返す", () => {
   assert.equal(getBestStoredModel(database), null);
   assert.equal(getLatestGenerationNumber(database), 0);
 
+  database.close();
+});
+
+test("各世代の優勝モデルからHall of Fameを取得する", () => {
+  const database = openTrainingDatabase(":memory:");
+  const runId = startTrainingRun(database, {
+    populationSize: 2,
+    gamesPerModel: 1,
+    opponentCpu: STRONG,
+  });
+
+  for (const [generation, fitness] of [[1, 10], [2, 30], [3, 20]]) {
+    saveGeneration(database, {
+      runId,
+      generation,
+      bestFitness: fitness,
+      averageFitness: fitness - 1,
+      rankedPopulation: [
+        { model: DEFAULT_MODEL, fitness },
+        { model: DEFAULT_MODEL, fitness: fitness - 2 },
+      ],
+    });
+  }
+
+  assert.deepEqual(
+    getHallOfFameModels(database, 2).map(({ generation }) => generation),
+    [2, 3],
+  );
   database.close();
 });

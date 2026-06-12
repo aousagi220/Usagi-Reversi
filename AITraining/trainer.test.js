@@ -4,6 +4,7 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 
+const { createNeuralModel } = require("./evaluator");
 const { calculateFitness, train, resolveTrainingStart } = require("./trainer");
 
 test("勝率・引き分け・平均石差から適応度を計算する", () => {
@@ -12,8 +13,21 @@ test("勝率・引き分け・平均石差から適応度を計算する", () =>
       modelWinRate: 0.6,
       drawRate: 0.1,
       averageStoneDifference: 5,
+      hallOfFameElo: 1500,
     }),
     67.5,
+  );
+});
+
+test("Hall of Fame Eloを適応度へ反映する", () => {
+  assert.equal(
+    calculateFitness({
+      modelWinRate: 0,
+      drawRate: 0,
+      averageStoneDifference: 0,
+      hallOfFameElo: 1600,
+    }),
+    10,
   );
 });
 
@@ -123,4 +137,35 @@ test("終盤完全読みの閾値は0から60の整数のみ指定できる", ()
       }),
     /endgameThreshold must be an integer between 0 and 60/,
   );
+});
+
+test("局所探索の設定値を検証する", () => {
+  assert.throws(
+    () => train({ populationSize: 2, localSearchEliteCount: 3 }),
+    /localSearchEliteCount must be between 0 and populationSize/,
+  );
+  assert.throws(
+    () => train({ localSearchCoordinateCount: 25 }),
+    /localSearchCoordinateCount must be an integer between 0 and 24/,
+  );
+  assert.throws(
+    () => train({ localSearchStrength: -0.1 }),
+    /localSearchStrength must be a non-negative number/,
+  );
+});
+
+test("小規模NNモデルでも学習できる", () => {
+  const result = train({
+    populationSize: 2,
+    generationCount: 1,
+    baseModel: createNeuralModel({ random: () => 0.5 }),
+    localSearchEliteCount: 0,
+    evaluateModel: (model) => ({
+      fitness: model.opening.outputWeights[0],
+      stats: {},
+    }),
+    outputPath: path.join(os.tmpdir(), "reversi-nn-best.json"),
+  });
+
+  assert.equal(result.best.model.type, "nn");
 });

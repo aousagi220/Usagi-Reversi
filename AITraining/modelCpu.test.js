@@ -158,6 +158,55 @@ test("探索深さ1では既存の1手読み評価と同じ候補集合になる
   );
 });
 
+test("置換表は同一局面の再探索結果を再利用する", () => {
+  const board = createBoard();
+  const transpositionTable = new Map();
+  const searchStats = {};
+  const firstScore = negamax(
+    board,
+    BLACK,
+    3,
+    -Infinity,
+    Infinity,
+    createModel(),
+    transpositionTable,
+    searchStats,
+  );
+  const nodesAfterFirstSearch = searchStats.nodes;
+  const hitsAfterFirstSearch = searchStats.cacheHits ?? 0;
+  const secondScore = negamax(
+    board,
+    BLACK,
+    3,
+    -Infinity,
+    Infinity,
+    createModel(),
+    transpositionTable,
+    searchStats,
+  );
+
+  assert.equal(secondScore, firstScore);
+  assert.equal(searchStats.nodes, nodesAfterFirstSearch + 1);
+  assert.equal(searchStats.cacheHits, hitsAfterFirstSearch + 1);
+  assert.ok(transpositionTable.size > 0);
+});
+
+test("置換表の有無で選択する手は変わらない", () => {
+  const board = createBoard();
+  const options = { searchDepth: 4 };
+
+  assert.deepEqual(
+    selectModelMove(board, BLACK, undefined, () => 0, {
+      ...options,
+      useTranspositionTable: true,
+    }),
+    selectModelMove(board, BLACK, undefined, () => 0, {
+      ...options,
+      useTranspositionTable: false,
+    }),
+  );
+});
+
 test("終盤閾値以下では終局まで完全読みする", () => {
   const board = [
     [WHITE, EMPTY, EMPTY, WHITE, WHITE, WHITE, WHITE, WHITE],

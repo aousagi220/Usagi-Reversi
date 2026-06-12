@@ -187,6 +187,33 @@ function getBestStoredModel(database) {
   };
 }
 
+function getHallOfFameModels(database, limit = 8) {
+  if (!Number.isInteger(limit) || limit < 1) {
+    throw new Error("limit must be a positive integer");
+  }
+
+  return database
+    .prepare(`
+      SELECT
+        generations.generation_number AS generation,
+        models.fitness,
+        models.weights_json,
+        models.stats_json
+      FROM models
+      JOIN generations ON generations.id = models.generation_id
+      WHERE models.rank = 1
+      ORDER BY models.fitness DESC, generations.generation_number DESC
+      LIMIT ?
+    `)
+    .all(limit)
+    .map((row) => ({
+      generation: Number(row.generation),
+      fitness: Number(row.fitness),
+      model: normalizeModel(JSON.parse(row.weights_json)),
+      stats: row.stats_json ? JSON.parse(row.stats_json) : null,
+    }));
+}
+
 function getTrainingCounts(database) {
   const runs = database
     .prepare("SELECT COUNT(*) AS count FROM training_runs")
@@ -214,5 +241,6 @@ module.exports = {
   completeTrainingRun,
   getLatestGenerationNumber,
   getBestStoredModel,
+  getHallOfFameModels,
   getTrainingCounts,
 };

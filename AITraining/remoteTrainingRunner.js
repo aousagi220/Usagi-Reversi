@@ -1,7 +1,13 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const { DEFAULT_MODEL, normalizeModel, validateModel } = require("./evaluator");
+const {
+  DEFAULT_MODEL,
+  createNeuralModel,
+  normalizeModel,
+  validateModel,
+} = require("./evaluator");
+const { getModelParameters } = require("./geneticAlgorithm");
 const { DEFAULT_OPPONENT_MIX } = require("./mixedEvaluation");
 const { train } = require("./trainer");
 
@@ -22,6 +28,9 @@ function normalizeRemoteJob(job) {
   }
 
   const config = job.config ?? {};
+  const configuredBaseModel = config.modelType === "nn" && !config.baseModel
+    ? createNeuralModel()
+    : config.baseModel ?? DEFAULT_MODEL;
   const normalizedJob = {
     protocolVersion: REMOTE_TRAINING_PROTOCOL_VERSION,
     jobId: job.jobId,
@@ -31,9 +40,13 @@ function normalizeRemoteJob(job) {
       gamesPerModel: config.gamesPerModel ?? 40,
       searchDepth: config.searchDepth ?? 2,
       endgameThreshold: config.endgameThreshold ?? 8,
+      localSearchEliteCount: config.localSearchEliteCount ?? 1,
+      localSearchCoordinateCount: config.localSearchCoordinateCount ?? 4,
+      localSearchStrength: config.localSearchStrength ?? 0.1,
       opponentMix: config.opponentMix ?? DEFAULT_OPPONENT_MIX,
-      baseModel: normalizeModel(config.baseModel ?? DEFAULT_MODEL),
-      pastModel: normalizeModel(config.pastModel ?? config.baseModel ?? DEFAULT_MODEL),
+      baseModel: normalizeModel(configuredBaseModel),
+      hallOfFameModels: (config.hallOfFameModels ?? [configuredBaseModel])
+        .map((model) => normalizeModel(model)),
       startGeneration: config.startGeneration ?? 1,
       previousBest: config.previousBest
         ? {
@@ -49,8 +62,30 @@ function normalizeRemoteJob(job) {
   validatePositiveInteger(normalizedJob.config.gamesPerModel, "gamesPerModel");
   validatePositiveInteger(normalizedJob.config.searchDepth, "searchDepth");
   validatePositiveInteger(normalizedJob.config.startGeneration, "startGeneration");
+  const parameterCount = getModelParameters(normalizedJob.config.baseModel).length;
+  if (
+    !Number.isInteger(normalizedJob.config.localSearchEliteCount) ||
+    normalizedJob.config.localSearchEliteCount < 0 ||
+    normalizedJob.config.localSearchEliteCount > normalizedJob.config.populationSize
+  ) {
+    throw new Error("localSearchEliteCount must be between 0 and populationSize");
+  }
+  if (
+    !Number.isInteger(normalizedJob.config.localSearchCoordinateCount) ||
+    normalizedJob.config.localSearchCoordinateCount < 0 ||
+    normalizedJob.config.localSearchCoordinateCount > parameterCount
+  ) {
+    throw new Error(
+      `localSearchCoordinateCount must be an integer between 0 and ${parameterCount}`,
+    );
+  }
+  if (!Number.isFinite(normalizedJob.config.localSearchStrength) || normalizedJob.config.localSearchStrength < 0) {
+    throw new Error("localSearchStrength must be a non-negative number");
+  }
   validateModel(normalizedJob.config.baseModel);
-  validateModel(normalizedJob.config.pastModel);
+  for (const model of normalizedJob.config.hallOfFameModels) {
+    validateModel(model);
+  }
 
   if (
     !Number.isInteger(normalizedJob.config.endgameThreshold) ||

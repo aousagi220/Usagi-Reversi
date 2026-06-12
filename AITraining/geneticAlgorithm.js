@@ -1,7 +1,7 @@
 const {
-  FEATURE_NAMES,
   PHASE_NAMES,
   DEFAULT_MODEL,
+  isNeuralModel,
   normalizeModel,
   validateModel,
 } = require("./evaluator");
@@ -10,20 +10,55 @@ function randomBetween(min, max, random = Math.random) {
   return min + (max - min) * random();
 }
 
-function mapModelWeights(model, mapWeight) {
-  const normalizedModel = normalizeModel(model);
+function collectNumericParameters(value, path, parameters) {
+  if (typeof value === "number") {
+    parameters.push({ path, value });
+    return;
+  }
+  if (Array.isArray(value)) {
+    value.forEach((entry, index) => collectNumericParameters(entry, [...path, index], parameters));
+    return;
+  }
+  for (const [key, entry] of Object.entries(value)) {
+    collectNumericParameters(entry, [...path, key], parameters);
+  }
+}
 
-  return Object.fromEntries(
-    PHASE_NAMES.map((phaseName) => [
-      phaseName,
-      Object.fromEntries(
-        FEATURE_NAMES.map((featureName) => [
-          featureName,
-          mapWeight(normalizedModel[phaseName][featureName], phaseName, featureName),
-        ]),
-      ),
-    ]),
-  );
+function getModelParameters(model) {
+  const normalizedModel = normalizeModel(model);
+  const parameters = [];
+  for (const phaseName of PHASE_NAMES) {
+    collectNumericParameters(normalizedModel[phaseName], [phaseName], parameters);
+  }
+  return parameters;
+}
+
+function getPathValue(object, path) {
+  return path.reduce((value, key) => value[key], object);
+}
+
+function setPathValue(object, path, value) {
+  const parent = path.slice(0, -1).reduce((current, key) => current[key], object);
+  parent[path.at(-1)] = value;
+}
+
+function mapModelParameters(model, mapParameter) {
+  const normalizedModel = normalizeModel(model);
+  const mappedModel = structuredClone(normalizedModel);
+
+  getModelParameters(normalizedModel).forEach(({ path, value }, index) => {
+    setPathValue(mappedModel, path, mapParameter(value, path, index));
+  });
+  return mappedModel;
+}
+
+function assertCompatibleModels(firstModel, secondModel) {
+  if (isNeuralModel(firstModel) !== isNeuralModel(secondModel)) {
+    throw new Error("models must use the same architecture");
+  }
+  if (getModelParameters(firstModel).length !== getModelParameters(secondModel).length) {
+    throw new Error("models must have the same parameter count");
+  }
 }
 
 function createRandomModel({
@@ -32,13 +67,12 @@ function createRandomModel({
   random = Math.random,
 } = {}) {
   validateModel(baseModel);
-
   if (!Number.isFinite(variationRate) || variationRate < 0) {
     throw new Error("variationRate must be a non-negative number");
   }
 
-  return mapModelWeights(baseModel, (baseWeight) => {
-    const variation = Math.max(Math.abs(baseWeight), 1) * variationRate;
+  return mapModelParameters(baseModel, (baseWeight) => {
+    const variation = Math.max(Math.abs(baseWeight), 0.1) * variationRate;
     return randomBetween(baseWeight - variation, baseWeight + variation, random);
   });
 }
@@ -46,12 +80,11 @@ function createRandomModel({
 function crossoverModels(firstParent, secondParent, random = Math.random) {
   validateModel(firstParent);
   validateModel(secondParent);
+  assertCompatibleModels(firstParent, secondParent);
   const normalizedSecondParent = normalizeModel(secondParent);
 
-  return mapModelWeights(firstParent, (firstWeight, phaseName, featureName) =>
-    random() < 0.5
-      ? firstWeight
-      : normalizedSecondParent[phaseName][featureName],
+  return mapModelParameters(firstParent, (firstWeight, path) =>
+    random() < 0.5 ? firstWeight : getPathValue(normalizedSecondParent, path),
   );
 }
 
@@ -64,7 +97,6 @@ function mutateModel(
   } = {},
 ) {
   validateModel(model);
-
   if (mutationRate < 0 || mutationRate > 1) {
     throw new Error("mutationRate must be between 0 and 1");
   }
@@ -72,10 +104,9 @@ function mutateModel(
     throw new Error("mutationStrength must be a non-negative number");
   }
 
-  return mapModelWeights(model, (weight) => {
+  return mapModelParameters(model, (weight) => {
     if (random() >= mutationRate) return weight;
-
-    const mutationRange = Math.max(Math.abs(weight), 1) * mutationStrength;
+    const mutationRange = Math.max(Math.abs(weight), 0.1) * mutationStrength;
     return weight + randomBetween(-mutationRange, mutationRange, random);
   });
 }
@@ -107,16 +138,88 @@ function evaluatePopulation(population, evaluateModel) {
       validateModel(model);
       const normalizedModel = normalizeModel(model);
       const evaluation = evaluateModel(normalizedModel, index);
-
       if (!Number.isFinite(evaluation.fitness)) {
         throw new TypeError("fitness must be a finite number");
       }
-
-      return {
-        model: normalizedModel,
-        ...evaluation,
-      };
+      return { model: normalizedModel, ...evaluation };
     })
+    .sort((first, second) => second.fitness - first.fitness);
+}
+
+function createCoordinateCandidate(model, path, delta) {
+  const candidate = normalizeModel(model);
+  setPathValue(candidate, path, getPathValue(candidate, path) + delta);
+  return candidate;
+}
+
+function improveIndividualWithLocalSearch(
+  individual,
+  evaluateModel,
+  {
+    coordinateCount = 4,
+    coordinateOffset = 0,
+    strength = 0.1,
+  } = {},
+) {
+  if (!Number.isInteger(coordinateCount) || coordinateCount < 0) {
+    throw new Error("coordinateCount must be a non-negative integer");
+  }
+  if (!Number.isInteger(coordinateOffset) || coordinateOffset < 0) {
+    throw new Error("coordinateOffset must be a non-negative integer");
+  }
+  if (!Number.isFinite(strength) || strength < 0) {
+    throw new Error("local search strength must be a non-negative number");
+  }
+
+  const coordinates = getModelParameters(individual.model);
+  let best = { ...individual, model: normalizeModel(individual.model) };
+
+  for (let index = 0; index < Math.min(coordinateCount, coordinates.length); index++) {
+    const { path } = coordinates[(coordinateOffset + index) % coordinates.length];
+    const baseModel = best.model;
+    const weight = getPathValue(baseModel, path);
+    const step = Math.max(Math.abs(weight), 0.1) * strength;
+    let coordinateBest = best;
+
+    for (const direction of [1, -1]) {
+      const candidateModel = createCoordinateCandidate(baseModel, path, step * direction);
+      const evaluation = evaluateModel(candidateModel);
+      if (!Number.isFinite(evaluation.fitness)) {
+        throw new TypeError("fitness must be a finite number");
+      }
+      if (evaluation.fitness > coordinateBest.fitness) {
+        coordinateBest = { model: candidateModel, ...evaluation };
+      }
+    }
+    best = coordinateBest;
+  }
+  return best;
+}
+
+function improvePopulationWithLocalSearch(
+  rankedPopulation,
+  evaluateModel,
+  {
+    eliteCount = 1,
+    coordinateCount = 4,
+    coordinateOffset = 0,
+    strength = 0.1,
+  } = {},
+) {
+  if (!Number.isInteger(eliteCount) || eliteCount < 0 || eliteCount > rankedPopulation.length) {
+    throw new Error("local search eliteCount must be between 0 and population size");
+  }
+
+  return rankedPopulation
+    .map((individual, index) =>
+      index < eliteCount
+        ? improveIndividualWithLocalSearch(individual, evaluateModel, {
+            coordinateCount,
+            coordinateOffset,
+            strength,
+          })
+        : individual,
+    )
     .sort((first, second) => second.fitness - first.fitness);
 }
 
@@ -153,20 +256,20 @@ function createNextGeneration(
       selectParent(rankedPopulation, selectionPoolSize, random),
       random,
     );
-    nextGeneration.push(
-      mutateModel(child, { mutationRate, mutationStrength, random }),
-    );
+    nextGeneration.push(mutateModel(child, { mutationRate, mutationStrength, random }));
   }
-
   return nextGeneration;
 }
 
 module.exports = {
   randomBetween,
+  getModelParameters,
   createRandomModel,
   crossoverModels,
   mutateModel,
   createInitialPopulation,
   evaluatePopulation,
+  improveIndividualWithLocalSearch,
+  improvePopulationWithLocalSearch,
   createNextGeneration,
 };

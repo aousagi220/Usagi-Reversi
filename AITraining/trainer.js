@@ -1,15 +1,29 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const { STRONG } = require("../Automation/cpuStrategies");
-const { FEATURE_NAMES, PHASE_NAMES, DEFAULT_MODEL, normalizeModel } = require("./evaluator");
-const { createInitialPopulation, evaluatePopulation, createNextGeneration } = require("./geneticAlgorithm");
+const {
+  FEATURE_NAMES,
+  PHASE_NAMES,
+  DEFAULT_MODEL,
+  isNeuralModel,
+  createNeuralModel,
+  normalizeModel,
+} = require("./evaluator");
+const {
+  createInitialPopulation,
+  evaluatePopulation,
+  getModelParameters,
+  improvePopulationWithLocalSearch,
+  createNextGeneration,
+} = require("./geneticAlgorithm");
 const { loadOpeningBook } = require("./trainingSimulator");
 const { DEFAULT_OPPONENT_MIX, simulateMixedMatches } = require("./mixedEvaluation");
 
 const DEFAULT_BEST_MODEL_PATH = path.join(__dirname, "models", "bestModel.json");
 
 function calculateFitness(stats) {
-  return stats.modelWinRate * 100 + stats.drawRate * 25 + stats.averageStoneDifference;
+  const hallOfFameBonus = ((stats.hallOfFameElo ?? 1500) - 1500) / 10;
+  return stats.modelWinRate * 100 + stats.drawRate * 25 + stats.averageStoneDifference + hallOfFameBonus;
 }
 
 function writeBestModel(rankedModel, generation, outputPath = DEFAULT_BEST_MODEL_PATH) {
@@ -41,9 +55,12 @@ function train({
   openingBook = loadOpeningBook(),
   outputPath = DEFAULT_BEST_MODEL_PATH,
   baseModel = DEFAULT_MODEL,
-  pastModel = baseModel,
+  hallOfFameModels = [baseModel],
   startGeneration = 1,
   previousBest = null,
+  localSearchEliteCount = 1,
+  localSearchCoordinateCount = 4,
+  localSearchStrength = 0.1,
   evaluateModel = null,
   onGenerationComplete = null,
 } = {}) {
@@ -62,13 +79,27 @@ function train({
   if (!Number.isInteger(startGeneration) || startGeneration <= 0) {
     throw new Error("startGeneration must be a positive integer");
   }
+  if (!Number.isInteger(localSearchEliteCount) || localSearchEliteCount < 0 || localSearchEliteCount > populationSize) {
+    throw new Error("localSearchEliteCount must be between 0 and populationSize");
+  }
+  const parameterCount = getModelParameters(baseModel).length;
+  if (
+    !Number.isInteger(localSearchCoordinateCount) ||
+    localSearchCoordinateCount < 0 ||
+    localSearchCoordinateCount > parameterCount
+  ) {
+    throw new Error(`localSearchCoordinateCount must be an integer between 0 and ${parameterCount}`);
+  }
+  if (!Number.isFinite(localSearchStrength) || localSearchStrength < 0) {
+    throw new Error("localSearchStrength must be a non-negative number");
+  }
 
   const evaluator =
     evaluateModel ??
     ((model) => {
       const stats = simulateMixedMatches({
         model,
-        pastModel,
+        hallOfFameModels,
         gameCount: gamesPerModel,
         searchDepth,
         endgameThreshold,
@@ -98,7 +129,17 @@ function train({
 
   for (let generationIndex = 0; generationIndex < generationCount; generationIndex++) {
     const generation = startGeneration + generationIndex;
-    const rankedPopulation = evaluatePopulation(population, evaluator);
+    const evaluatedPopulation = evaluatePopulation(population, evaluator);
+    const rankedPopulation = improvePopulationWithLocalSearch(
+      evaluatedPopulation,
+      evaluator,
+      {
+        eliteCount: localSearchEliteCount,
+        coordinateCount: localSearchCoordinateCount,
+        coordinateOffset: generationIndex * localSearchCoordinateCount,
+        strength: localSearchStrength,
+      },
+    );
     const best = rankedPopulation[0];
 
     if (bestOverall === null || best.fitness > bestOverall.fitness) {
@@ -137,6 +178,10 @@ function printGeneration(result) {
   console.log(
     `世代${result.generation}: best=${result.bestFitness.toFixed(2)} average=${result.averageFitness.toFixed(2)}`,
   );
+  if (isNeuralModel(result.bestModel)) {
+    console.log(`  neural network: hidden=8 parameters=${getModelParameters(result.bestModel).length}`);
+    return;
+  }
   for (const phaseName of PHASE_NAMES) {
     const weights = FEATURE_NAMES.map(
       (featureName) => `${featureName}=${result.bestModel[phaseName][featureName].toFixed(2)}`,
@@ -208,6 +253,29 @@ if (require.main === module) {
   const endgameThreshold = endgameThresholdArgument
     ? Number(endgameThresholdArgument.slice("--endgame-threshold=".length))
     : 0;
+  const localSearchEliteArgument = commandArguments.find((argument) => argument.startsWith("--local-search-elites="));
+  const localSearchEliteCount = localSearchEliteArgument
+    ? Number(localSearchEliteArgument.slice("--local-search-elites=".length))
+    : 1;
+  const localSearchCoordinatesArgument = commandArguments.find(
+    (argument) => argument.startsWith("--local-search-coordinates="),
+  );
+  const localSearchCoordinateCount = localSearchCoordinatesArgument
+    ? Number(localSearchCoordinatesArgument.slice("--local-search-coordinates=".length))
+    : 4;
+  const localSearchStrengthArgument = commandArguments.find(
+    (argument) => argument.startsWith("--local-search-strength="),
+  );
+  const localSearchStrength = localSearchStrengthArgument
+    ? Number(localSearchStrengthArgument.slice("--local-search-strength=".length))
+    : 0.1;
+  const modelTypeArgument = commandArguments.find((argument) => argument.startsWith("--model-type="));
+  const modelType = modelTypeArgument
+    ? modelTypeArgument.slice("--model-type=".length)
+    : "linear";
+  if (modelType !== "linear" && modelType !== "nn") {
+    throw new Error("model-type must be linear or nn");
+  }
   const shouldResume = commandArguments.includes("--resume");
 
   const {
@@ -218,6 +286,7 @@ if (require.main === module) {
     completeTrainingRun,
     getLatestGenerationNumber,
     getBestStoredModel,
+    getHallOfFameModels,
   } = require("./modelStore");
 
   const database = openTrainingDatabase();
@@ -231,6 +300,18 @@ if (require.main === module) {
     fileBest,
     latestGeneration: getLatestGenerationNumber(database),
   });
+  const baseModel = !shouldResume && modelType === "nn"
+    ? createNeuralModel()
+    : normalizeModel(trainingStart.baseModel);
+  const previousBest =
+    trainingStart.previousBest &&
+    isNeuralModel(trainingStart.previousBest.model) === isNeuralModel(baseModel)
+      ? trainingStart.previousBest
+      : null;
+  const hallOfFameModels = getHallOfFameModels(database, 8).map(({ model }) => model);
+  if (hallOfFameModels.length === 0) {
+    hallOfFameModels.push(baseModel);
+  }
 
   if (storedBest && (!fileBest || storedBest.fitness > fileBest.fitness)) {
     writeBestModel(storedBest, storedBest.generation, DEFAULT_BEST_MODEL_PATH);
@@ -250,6 +331,11 @@ if (require.main === module) {
   }
   console.log(`探索深さ: ${searchDepth}`);
   console.log(`終盤完全読み: ${endgameThreshold === 0 ? "無効" : `残り${endgameThreshold}マス以下`}`);
+  console.log(`Hall of Fame: ${hallOfFameModels.length}モデル`);
+  console.log(`評価モデル: ${isNeuralModel(baseModel) ? "小規模NN" : "線形"}`);
+  console.log(
+    `局所探索: 上位${localSearchEliteCount}体 / ${localSearchCoordinateCount}座標 / 強度${localSearchStrength}`,
+  );
 
   let result;
 
@@ -260,9 +346,13 @@ if (require.main === module) {
       gamesPerModel,
       searchDepth,
       endgameThreshold,
-      baseModel: trainingStart.baseModel,
+      baseModel,
       startGeneration: trainingStart.startGeneration,
-      previousBest: trainingStart.previousBest,
+      previousBest,
+      hallOfFameModels,
+      localSearchEliteCount,
+      localSearchCoordinateCount,
+      localSearchStrength,
       onGenerationComplete: (generationResult, rankedPopulation) => {
         printGeneration(generationResult);
         saveGeneration(database, {

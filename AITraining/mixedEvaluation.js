@@ -1,13 +1,13 @@
-const { BLACK, WHITE } = require("../Automation/reversiEngine");
+const { BLACK, WHITE, getOpponent } = require("../Automation/reversiEngine");
 const { WEAK, NORMAL, STRONG } = require("../Automation/cpuStrategies");
 const { DEFAULT_MODEL, validateModel } = require("./evaluator");
 const { simulateModelMatches, simulateModelsMatches } = require("./trainingSimulator");
 
 const DEFAULT_OPPONENT_MIX = Object.freeze({
-  weak: 0.1,
-  normal: 0.2,
-  strong: 0.5,
-  pastModel: 0.2,
+  weak: 0.05,
+  normal: 0.15,
+  strong: 0.3,
+  hallOfFame: 0.5,
 });
 
 function allocateOpponentGames(gameCount, opponentMix = DEFAULT_OPPONENT_MIX) {
@@ -87,9 +87,84 @@ function combineMatchStats(gameCount, opponentMix, allocation, breakdown) {
   };
 }
 
+function calculateSimpleElo(stats, opponentRating = 1500) {
+  const scoreRate = (stats.modelWins + stats.draws * 0.5) / stats.gameCount;
+  const boundedScoreRate = Math.min(0.99, Math.max(0.01, scoreRate));
+  return opponentRating + 400 * Math.log10(boundedScoreRate / (1 - boundedScoreRate));
+}
+
+function simulateHallOfFameMatches({
+  model,
+  hallOfFameModels,
+  gameCount,
+  startModelColor,
+  random,
+  searchDepth,
+  endgameThreshold,
+}) {
+  if (!Array.isArray(hallOfFameModels) || hallOfFameModels.length === 0) {
+    throw new Error("hallOfFameModels must not be empty");
+  }
+
+  const totals = {
+    gameCount,
+    opponentType: "hallOfFame",
+    opponentCount: hallOfFameModels.length,
+    modelWins: 0,
+    opponentWins: 0,
+    draws: 0,
+    modelBlackGames: 0,
+    modelWhiteGames: 0,
+    totalModelStones: 0,
+    totalOpponentStones: 0,
+  };
+  let scheduledGames = 0;
+
+  hallOfFameModels.forEach((opponentModel, index) => {
+    validateModel(opponentModel);
+    const remainingOpponents = hallOfFameModels.length - index;
+    const allocatedGames = Math.ceil((gameCount - scheduledGames) / remainingOpponents);
+    if (allocatedGames <= 0) return;
+
+    const stats = simulateModelsMatches({
+      model,
+      opponentModel,
+      gameCount: allocatedGames,
+      startModelColor: scheduledGames % 2 === 0 ? startModelColor : getOpponent(startModelColor),
+      random,
+      searchDepth,
+      endgameThreshold,
+    });
+    scheduledGames += allocatedGames;
+
+    for (const key of [
+      "modelWins",
+      "opponentWins",
+      "draws",
+      "modelBlackGames",
+      "modelWhiteGames",
+      "totalModelStones",
+      "totalOpponentStones",
+    ]) {
+      totals[key] += stats[key];
+    }
+  });
+
+  return {
+    ...totals,
+    modelWinRate: totals.modelWins / gameCount,
+    opponentWinRate: totals.opponentWins / gameCount,
+    drawRate: totals.draws / gameCount,
+    averageModelStones: totals.totalModelStones / gameCount,
+    averageOpponentStones: totals.totalOpponentStones / gameCount,
+    averageStoneDifference: (totals.totalModelStones - totals.totalOpponentStones) / gameCount,
+    simpleElo: calculateSimpleElo(totals),
+  };
+}
+
 function simulateMixedMatches({
   model = DEFAULT_MODEL,
-  pastModel = DEFAULT_MODEL,
+  hallOfFameModels = [DEFAULT_MODEL],
   gameCount = 100,
   opponentMix = DEFAULT_OPPONENT_MIX,
   random = Math.random,
@@ -98,7 +173,9 @@ function simulateMixedMatches({
   endgameThreshold = 0,
 } = {}) {
   validateModel(model);
-  validateModel(pastModel);
+  if (!Array.isArray(hallOfFameModels) || hallOfFameModels.length === 0) {
+    throw new Error("hallOfFameModels must not be empty");
+  }
 
   const allocation = allocateOpponentGames(gameCount, opponentMix);
   const breakdown = {};
@@ -127,12 +204,12 @@ function simulateMixedMatches({
     scheduledGames += allocatedGames;
   }
 
-  if ((allocation.pastModel ?? 0) > 0) {
+  if ((allocation.hallOfFame ?? 0) > 0) {
     const startModelColor = scheduledGames % 2 === 0 ? BLACK : WHITE;
-    breakdown.pastModel = simulateModelsMatches({
+    breakdown.hallOfFame = simulateHallOfFameMatches({
       model,
-      opponentModel: pastModel,
-      gameCount: allocation.pastModel,
+      hallOfFameModels,
+      gameCount: allocation.hallOfFame,
       startModelColor,
       random,
       searchDepth,
@@ -140,11 +217,17 @@ function simulateMixedMatches({
     });
   }
 
-  return combineMatchStats(gameCount, opponentMix, allocation, breakdown);
+  const stats = combineMatchStats(gameCount, opponentMix, allocation, breakdown);
+  return {
+    ...stats,
+    hallOfFameElo: breakdown.hallOfFame?.simpleElo ?? 1500,
+  };
 }
 
 module.exports = {
   DEFAULT_OPPONENT_MIX,
   allocateOpponentGames,
+  calculateSimpleElo,
+  simulateHallOfFameMatches,
   simulateMixedMatches,
 };

@@ -4,7 +4,12 @@ const http = require("node:http");
 const path = require("node:path");
 
 const { STRONG } = require("../Automation/cpuStrategies");
-const { normalizeModel, validateModel } = require("./evaluator");
+const {
+  isNeuralModel,
+  createNeuralModel,
+  normalizeModel,
+  validateModel,
+} = require("./evaluator");
 const {
   DEFAULT_BEST_MODEL_PATH,
   resolveTrainingStart,
@@ -18,6 +23,7 @@ const {
   completeTrainingRun,
   getLatestGenerationNumber,
   getBestStoredModel,
+  getHallOfFameModels,
 } = require("./modelStore");
 const {
   REMOTE_TRAINING_PROTOCOL_VERSION,
@@ -134,10 +140,17 @@ function createRemoteJob({
   gamesPerModel,
   searchDepth,
   endgameThreshold,
+  localSearchEliteCount,
+  localSearchCoordinateCount,
+  localSearchStrength,
+  modelType = "linear",
   shouldResume,
   database,
   bestModelPath = DEFAULT_BEST_MODEL_PATH,
 }) {
+  if (modelType !== "linear" && modelType !== "nn") {
+    throw new Error("modelType must be linear or nn");
+  }
   const storedBest = getBestStoredModel(database);
   const fileBest = fs.existsSync(bestModelPath)
     ? JSON.parse(fs.readFileSync(bestModelPath, "utf8"))
@@ -148,6 +161,13 @@ function createRemoteJob({
     fileBest,
     latestGeneration: getLatestGenerationNumber(database),
   });
+  const baseModel = !shouldResume && modelType === "nn"
+    ? createNeuralModel()
+    : normalizeModel(trainingStart.baseModel);
+  const hallOfFameModels = getHallOfFameModels(database, 8).map(({ model }) => model);
+  if (hallOfFameModels.length === 0) {
+    hallOfFameModels.push(baseModel);
+  }
 
   return normalizeRemoteJob({
     protocolVersion: REMOTE_TRAINING_PROTOCOL_VERSION,
@@ -158,10 +178,16 @@ function createRemoteJob({
       gamesPerModel,
       searchDepth,
       endgameThreshold,
-      baseModel: normalizeModel(trainingStart.baseModel),
-      pastModel: normalizeModel(trainingStart.baseModel),
+      localSearchEliteCount,
+      localSearchCoordinateCount,
+      localSearchStrength,
+      modelType,
+      baseModel,
+      hallOfFameModels,
       startGeneration: trainingStart.startGeneration,
-      previousBest: trainingStart.previousBest
+      previousBest:
+        trainingStart.previousBest &&
+        isNeuralModel(trainingStart.previousBest.model) === isNeuralModel(baseModel)
         ? {
             ...trainingStart.previousBest,
             model: normalizeModel(trainingStart.previousBest.model),
@@ -348,6 +374,12 @@ function parseServerArguments(commandArguments) {
     gamesPerModel: Number(positionalArguments[2] ?? 40),
     searchDepth: valueOf("search-depth", 2),
     endgameThreshold: valueOf("endgame-threshold", 8),
+    localSearchEliteCount: valueOf("local-search-elites", 1),
+    localSearchCoordinateCount: valueOf("local-search-coordinates", 4),
+    localSearchStrength: valueOf("local-search-strength", 0.1),
+    modelType:
+      commandArguments.find((entry) => entry.startsWith("--model-type="))
+        ?.slice("--model-type=".length) ?? "linear",
     port: valueOf("port", DEFAULT_REMOTE_TRAINING_PORT),
     shouldResume: commandArguments.includes("--resume"),
   };
@@ -374,6 +406,11 @@ if (require.main === module) {
       `設定: ${options.generationCount}世代 / ${options.populationSize}個体 / ` +
       `${options.gamesPerModel}試合 / 深さ${options.searchDepth} / 終盤${options.endgameThreshold}`,
     );
+    console.log(
+      `局所探索: 上位${options.localSearchEliteCount}体 / ` +
+      `${options.localSearchCoordinateCount}座標 / 強度${options.localSearchStrength}`,
+    );
+    console.log(`評価モデル: ${options.modelType === "nn" ? "小規模NN" : "線形"}`);
   });
 
   function shutdown() {

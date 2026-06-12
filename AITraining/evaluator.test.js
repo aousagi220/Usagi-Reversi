@@ -10,6 +10,7 @@ const {
 const {
   FEATURE_NAMES,
   DEFAULT_MODEL,
+  createNeuralModel,
   normalizeModel,
   validateModel,
   getPhaseWeights,
@@ -134,4 +135,39 @@ test("特徴量には有限な値が必要", () => {
     () => evaluateFeatures(features),
     /Feature value must be finite/,
   );
+});
+
+test("小規模NNは白黒視点で評価値の符号が反転する", () => {
+  const model = createNeuralModel({ random: () => 0.75 });
+  const features = Object.fromEntries(
+    FEATURE_NAMES.map((featureName, index) => [featureName, index + 1]),
+  );
+  const oppositeFeatures = Object.fromEntries(
+    FEATURE_NAMES.map((featureName) => [featureName, -features[featureName]]),
+  );
+
+  const score = evaluateFeatures(features, model, 30);
+  const oppositeScore = evaluateFeatures(oppositeFeatures, model, 30);
+
+  assert.equal(Number.isFinite(score), true);
+  assert.ok(Math.abs(score + oppositeScore) < 1e-10);
+});
+
+test("小規模NNの段階出力を線形補間する", () => {
+  const model = createNeuralModel({ random: () => 0.5 });
+  model.opening.inputWeights[0][0] = 1;
+  model.opening.outputWeights[0] = 1;
+  model.midgame.inputWeights[0][0] = 1;
+  model.midgame.outputWeights[0] = 3;
+  const features = Object.fromEntries(
+    FEATURE_NAMES.map((featureName) => [featureName, 0]),
+  );
+  features.stoneDifference = 32;
+
+  const openingScore = evaluateFeatures(features, model, 45);
+  const midgameScore = evaluateFeatures(features, model, 30);
+  const blendedScore = evaluateFeatures(features, model, 37);
+
+  assert.ok(blendedScore > openingScore);
+  assert.ok(blendedScore < midgameScore);
 });

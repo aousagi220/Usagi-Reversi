@@ -51,6 +51,48 @@ npm run ai:train -- 20 16 40 --search-depth=3 --endgame-threshold=10
 複製して移行されます。24重みを探索するため、学習時の個体数は
 24以上を推奨します。
 
+学習時はSQLiteに保存された各世代の優勝モデルから、適応度上位8体を
+Hall of Fameとして読み込みます。既定では対局の50%をこのモデルプールへ
+割り当て、勝敗スコアから算出した簡易Eloも適応度へ反映します。
+
+各世代では上位個体へ制限付き座標降下も適用します。既定値は上位1体、
+4座標、重みの相対幅10%です。各座標の `+ε` と `-ε` を評価し、改善した
+候補だけを採用します。対象座標は世代ごとにずれ、線形モデルでは6世代で
+24重みを一巡します。NNは216パラメータなので、4座標ずつなら54世代で
+一巡します。
+
+```bash
+npm run ai:train -- 20 24 40 \
+  --search-depth=2 \
+  --endgame-threshold=8 \
+  --local-search-elites=1 \
+  --local-search-coordinates=4 \
+  --local-search-strength=0.1
+```
+
+局所探索を無効化する場合は `--local-search-elites=0` を指定します。
+
+### 小規模ニューラル評価
+
+新規学習では線形評価の代わりに「8特徴 → 隠れ層8 → 出力」の小規模NNを
+選択できます。
+
+```bash
+npm run ai:train -- 30 32 40 \
+  --model-type=nn \
+  --search-depth=2 \
+  --endgame-threshold=8 \
+  --local-search-coordinates=4
+```
+
+NNは序盤・中盤・終盤で別パラメータを持ち、合計216パラメータです。
+ネガマックスで白黒の評価値が必ず符号反転するよう、バイアスを持たない
+`tanh` ネットワークにしています。
+
+`--model-type=nn` は新規学習時に使用します。既存線形モデルの続きから
+NNへ切り替える場合は `--resume` を付けず、新しい学習として開始してください。
+線形評価へ戻す場合は `--model-type=linear` を指定するか省略します。
+
 前回のSQLite履歴から再開する場合:
 
 ```bash
@@ -59,6 +101,10 @@ npm run ai:train:resume -- 20 16 40 --search-depth=3 --endgame-threshold=10
 
 探索深さと完全読み閾値を上げるほど計算時間は増えます。最初は
 `--search-depth=2 --endgame-threshold=8` 程度で動作時間を確認してください。
+
+探索中は局面・手番・探索深度・αβ境界を置換表へ保存し、同じ局面の再計算を
+省略します。キャッシュした最善手は手順序付けにも再利用され、通常探索と
+終盤完全読みの両方で自動的に有効になります。
 
 ## Google Colabでリモート学習
 
@@ -82,8 +128,12 @@ printf '%s\n' "$REMOTE_TRAINING_TOKEN"
 
 ```bash
 npm run ai:remote:server -- 20 16 40 \
+  --model-type=nn \
   --search-depth=2 \
-  --endgame-threshold=8
+  --endgame-threshold=8 \
+  --local-search-elites=1 \
+  --local-search-coordinates=4 \
+  --local-search-strength=0.1
 ```
 
 SQLiteの続きから再開:
@@ -92,6 +142,9 @@ SQLiteの続きから再開:
 npm run ai:remote:server -- 20 16 40 \
   --search-depth=2 \
   --endgame-threshold=8 \
+  --local-search-elites=1 \
+  --local-search-coordinates=4 \
+  --local-search-strength=0.1 \
   --resume
 ```
 
