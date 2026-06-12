@@ -1,0 +1,113 @@
+{
+  "generation": 16,
+  "fitness": 139.925,
+  "stats": {
+    "gameCount": 40,
+    "opponentMix": {
+      "weak": 0.1,
+      "normal": 0.2,
+      "strong": 0.5,
+      "pastModel": 0.2
+    },
+    "allocation": {
+      "weak": 4,
+      "normal": 8,
+      "strong": 20,
+      "pastModel": 8
+    },
+    "breakdown": {
+      "weak": {
+        "gameCount": 4,
+        "opponentCpu": 0,
+        "modelWins": 4,
+        "opponentWins": 0,
+        "draws": 0,
+        "modelBlackGames": 2,
+        "modelWhiteGames": 2,
+        "totalModelStones": 214,
+        "totalOpponentStones": 42,
+        "modelWinRate": 1,
+        "opponentWinRate": 0,
+        "drawRate": 0,
+        "averageModelStones": 53.5,
+        "averageOpponentStones": 10.5,
+        "averageStoneDifference": 43
+      },
+      "normal": {
+        "gameCount": 8,
+        "opponentCpu": 1,
+        "modelWins": 8,
+        "opponentWins": 0,
+        "draws": 0,
+        "modelBlackGames": 4,
+        "modelWhiteGames": 4,
+        "totalModelStones": 438,
+        "totalOpponentStones": 73,
+        "modelWinRate": 1,
+        "opponentWinRate": 0,
+        "drawRate": 0,
+        "averageModelStones": 54.75,
+        "averageOpponentStones": 9.125,
+        "averageStoneDifference": 45.625
+      },
+      "strong": {
+        "gameCount": 20,
+        "opponentCpu": 2,
+        "modelWins": 20,
+        "opponentWins": 0,
+        "draws": 0,
+        "modelBlackGames": 10,
+        "modelWhiteGames": 10,
+        "totalModelStones": 1025,
+        "totalOpponentStones": 249,
+        "modelWinRate": 1,
+        "opponentWinRate": 0,
+        "drawRate": 0,
+        "averageModelStones": 51.25,
+        "averageOpponentStones": 12.45,
+        "averageStoneDifference": 38.8
+      },
+      "pastModel": {
+        "gameCount": 8,
+        "opponentType": "model",
+        "modelWins": 8,
+        "opponentWins": 0,
+        "draws": 0,
+        "modelBlackGames": 4,
+        "modelWhiteGames": 4,
+        "totalModelStones": 398,
+        "totalOpponentStones": 114,
+        "modelWinRate": 1,
+        "opponentWinRate": 0,
+        "drawRate": 0,
+        "averageModelStones": 49.75,
+        "averageOpponentStones": 14.25,
+        "averageStoneDifference": 35.5
+      }
+    },
+    "modelWins": 40,
+    "opponentWins": 0,
+    "draws": 0,
+    "modelBlackGames": 20,
+    "modelWhiteGames": 20,
+    "totalModelStones": 2075,
+    "totalOpponentStones": 478,
+    "modelWinRate": 1,
+    "opponentWinRate": 0,
+    "drawRate": 0,
+    "averageModelStones": 51.875,
+    "averageOpponentStones": 11.95,
+    "averageStoneDifference": 39.925
+  },
+  "weights": {
+    "stoneDifference": 0.8127269601012019,
+    "mobilityDifference": 6.915749971471964,
+    "cornerDifference": 38.22495256678453,
+    "edgeDifference": 10.175062043111655,
+    "frontierDifference": -10.654319067030126,
+    "cSquareDifference": -20.086920974690724,
+    "xSquareDifference": -27.81112114133296,
+    "stableDiscDifference": 24.937731544535204
+  },
+  "savedAt": "2026-06-12T02:00:11.228Z"
+}

@@ -4,6 +4,10 @@ const {
   DEFAULT_DATABASE_PATH,
   openDatabase,
 } = require("./database");
+const {
+  canonicalizeBoardKey,
+  transformCoordinate,
+} = require("./boardSymmetry");
 
 const DEFAULT_OUTPUT_PATH = path.join(__dirname, "data", "openingBook.json");
 const DEFAULT_BROWSER_OUTPUT_PATH = path.join(__dirname, "..", "JS", "openingBookData.js");
@@ -46,36 +50,53 @@ function collectOpeningBookRows(
         moves.player,
         moves.x,
         moves.y
-      HAVING COUNT(*) >= ?
       ORDER BY
         moves.board_key,
         moves.player,
         samples DESC
     `)
-    .all(maxTurn, minSamples);
+    .all(maxTurn);
 }
 
-function rowsToOpeningBook(rows) {
+function rowsToOpeningBook(rows, { minSamples = DEFAULT_MIN_SAMPLES } = {}) {
   const positions = {};
+  const aggregatedMoves = new Map();
 
   for (const row of rows) {
-    const positionKey = `${row.player}:${row.board_key}`;
+    const canonical = canonicalizeBoardKey(row.board_key);
+    const [x, y] = transformCoordinate(
+      [Number(row.x), Number(row.y)],
+      canonical.transform,
+    );
+    const positionKey = `${row.player}:${canonical.key}`;
+    const moveKey = `${positionKey}:${x}:${y}`;
     const samples = Number(row.samples);
     const wins = Number(row.wins);
     const draws = Number(row.draws);
-    const score = (wins + draws * 0.5) / samples;
+    const current = aggregatedMoves.get(moveKey) ?? {
+      positionKey,
+      x,
+      y,
+      samples: 0,
+      wins: 0,
+      draws: 0,
+    };
+    current.samples += samples;
+    current.wins += wins;
+    current.draws += draws;
+    aggregatedMoves.set(moveKey, current);
+  }
 
-    if (!positions[positionKey]) {
-      positions[positionKey] = [];
-    }
-
-    positions[positionKey].push({
-      x: Number(row.x),
-      y: Number(row.y),
-      samples,
-      wins,
-      draws,
-      score: Number(score.toFixed(4)),
+  for (const move of aggregatedMoves.values()) {
+    if (move.samples < minSamples) continue;
+    if (!positions[move.positionKey]) positions[move.positionKey] = [];
+    positions[move.positionKey].push({
+      x: move.x,
+      y: move.y,
+      samples: move.samples,
+      wins: move.wins,
+      draws: move.draws,
+      score: Number(((move.wins + move.draws * 0.5) / move.samples).toFixed(4)),
     });
   }
 
@@ -97,7 +118,7 @@ function buildOpeningBook(
   } = {},
 ) {
   const rows = collectOpeningBookRows(database, { maxTurn, minSamples });
-  const positions = rowsToOpeningBook(rows);
+  const positions = rowsToOpeningBook(rows, { minSamples });
 
   return {
     metadata: {

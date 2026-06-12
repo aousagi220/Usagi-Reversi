@@ -5,6 +5,10 @@ const {
   getValidMoves,
   countStones,
 } = require("./reversiEngine");
+const {
+  canonicalizeBoard,
+  inverseTransformCoordinate,
+} = require("./boardSymmetry");
 
 const WEAK = 0;
 const NORMAL = 1;
@@ -82,13 +86,24 @@ function selectOpeningMove(
 ) {
   if (!openingBook?.positions) return null;
 
-  const positionKey = `${player}:${boardToKey(board)}`;
-  const bookMoves = openingBook.positions[positionKey];
+  const canonical = canonicalizeBoard(board);
+  const positionKey = `${player}:${canonical.key}`;
+  const legacyPositionKey = `${player}:${boardToKey(board)}`;
+  const usesCanonicalPosition = openingBook.positions[positionKey] !== undefined;
+  const bookMoves = openingBook.positions[positionKey] ??
+    openingBook.positions[legacyPositionKey];
   if (!bookMoves || bookMoves.length === 0) return null;
 
-  const validBookMoves = bookMoves.filter((bookMove) =>
-    validMoves.some(([x, y]) => x === bookMove.x && y === bookMove.y),
-  );
+  const validBookMoves = bookMoves
+    .map((bookMove) => {
+      const [x, y] = usesCanonicalPosition
+        ? inverseTransformCoordinate([bookMove.x, bookMove.y], canonical.transform)
+        : [bookMove.x, bookMove.y];
+      return { ...bookMove, x, y };
+    })
+    .filter((bookMove) =>
+      validMoves.some(([x, y]) => x === bookMove.x && y === bookMove.y),
+    );
   if (validBookMoves.length === 0) return null;
 
   const bestScore = Math.max(...validBookMoves.map((move) => move.score));

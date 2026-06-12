@@ -11,6 +11,7 @@ const {
   getOpponent,
 } = require("../Automation/reversiEngine");
 const { createModel } = require("./evaluator");
+const { transformBoardKey } = require("../Automation/boardSymmetry");
 const {
   evaluateTerminalBoard,
   negamax,
@@ -189,6 +190,48 @@ test("置換表は同一局面の再探索結果を再利用する", () => {
   assert.equal(searchStats.nodes, nodesAfterFirstSearch + 1);
   assert.equal(searchStats.cacheHits, hitsAfterFirstSearch + 1);
   assert.ok(transpositionTable.size > 0);
+});
+
+test("置換表は回転した同一局面を再利用する", () => {
+  const board = createEmptyBoard();
+  board[0][0] = BLACK;
+  board[0][1] = WHITE;
+  board[0][2] = BLACK;
+  board[2][0] = WHITE;
+  board[3][0] = BLACK;
+  const rotatedKey = transformBoardKey(board.flat().join(""), 1);
+  const rotatedBoard = Array.from({ length: BOARD_SIZE }, (_, x) =>
+    Array.from({ length: BOARD_SIZE }, (_, y) =>
+      Number(rotatedKey[x * BOARD_SIZE + y]),
+    ),
+  );
+  const transpositionTable = new Map();
+  const searchStats = {};
+  const model = createModel();
+  const firstScore = negamax(
+    board,
+    BLACK,
+    3,
+    -Infinity,
+    Infinity,
+    model,
+    transpositionTable,
+    searchStats,
+  );
+  const hitsBeforeRotation = searchStats.cacheHits ?? 0;
+  const rotatedScore = negamax(
+    rotatedBoard,
+    BLACK,
+    3,
+    -Infinity,
+    Infinity,
+    model,
+    transpositionTable,
+    searchStats,
+  );
+
+  assert.equal(rotatedScore, firstScore);
+  assert.equal(searchStats.cacheHits, hitsBeforeRotation + 1);
 });
 
 test("置換表の有無で選択する手は変わらない", () => {

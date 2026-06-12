@@ -4,16 +4,73 @@ function boardToOpeningKey(board) {
   return board.flat().join("");
 }
 
+function transformOpeningCoordinate([x, y], transform) {
+  const last = BOARD_SIZE - 1;
+  switch (transform) {
+    case 0: return [x, y];
+    case 1: return [y, last - x];
+    case 2: return [last - x, last - y];
+    case 3: return [last - y, x];
+    case 4: return [x, last - y];
+    case 5: return [last - x, y];
+    case 6: return [y, x];
+    case 7: return [last - y, last - x];
+    default: return [x, y];
+  }
+}
+
+function inverseOpeningCoordinate(coordinate, transform) {
+  const inverseTransforms = [0, 3, 2, 1, 4, 5, 6, 7];
+  return transformOpeningCoordinate(coordinate, inverseTransforms[transform]);
+}
+
+function transformOpeningBoardKey(boardKey, transform) {
+  const transformed = Array(boardKey.length);
+  for (let x = 0; x < BOARD_SIZE; x++) {
+    for (let y = 0; y < BOARD_SIZE; y++) {
+      const [nextX, nextY] = transformOpeningCoordinate([x, y], transform);
+      transformed[nextX * BOARD_SIZE + nextY] = boardKey[x * BOARD_SIZE + y];
+    }
+  }
+  return transformed.join("");
+}
+
+function canonicalizeOpeningBoard(board) {
+  const boardKey = boardToOpeningKey(board);
+  let key = null;
+  let transform = 0;
+
+  for (let candidateTransform = 0; candidateTransform < 8; candidateTransform++) {
+    const candidateKey = transformOpeningBoardKey(boardKey, candidateTransform);
+    if (key === null || candidateKey < key) {
+      key = candidateKey;
+      transform = candidateTransform;
+    }
+  }
+  return { key, transform };
+}
+
 function getOpeningMove(validMoves) {
   if (typeof OPENING_BOOK === "undefined") return null;
 
-  const positionKey = `${currentPlayer}:${boardToOpeningKey(BOARD)}`;
-  const bookMoves = OPENING_BOOK.positions[positionKey];
+  const canonical = canonicalizeOpeningBoard(BOARD);
+  const positionKey = `${currentPlayer}:${canonical.key}`;
+  const legacyPositionKey = `${currentPlayer}:${boardToOpeningKey(BOARD)}`;
+  const usesCanonicalPosition = OPENING_BOOK.positions[positionKey] !== undefined;
+  const bookMoves = OPENING_BOOK.positions[positionKey] ??
+    OPENING_BOOK.positions[legacyPositionKey];
   if (!bookMoves || bookMoves.length === 0) return null;
 
-  const validBookMoves = bookMoves.filter((bookMove) =>
-    validMoves.some(([x, y]) => x === bookMove.x && y === bookMove.y),
-  );
+  const validBookMoves = bookMoves
+    .map((bookMove) => {
+      const [x, y] = usesCanonicalPosition
+        ? inverseOpeningCoordinate([bookMove.x, bookMove.y], canonical.transform)
+        : [bookMove.x, bookMove.y];
+      return { ...bookMove, x, y };
+    })
+    .filter((bookMove) =>
+      validMoves.some(([x, y]) => x === bookMove.x && y === bookMove.y),
+    );
   if (validBookMoves.length === 0) return null;
 
   const bestScore = Math.max(...validBookMoves.map((move) => move.score));

@@ -7,6 +7,11 @@ const {
   placeStone,
   countStones,
 } = require("../Automation/reversiEngine");
+const {
+  canonicalizeBoard,
+  transformCoordinate,
+  inverseTransformCoordinate,
+} = require("../Automation/boardSymmetry");
 const { DEFAULT_MODEL, validateModel, evaluateBoard } = require("./evaluator");
 
 const TERMINAL_WIN_SCORE = 1_000_000;
@@ -60,7 +65,15 @@ function evaluateTerminalBoard(board, player) {
 }
 
 function createBoardKey(board, player) {
-  return `${player}:${board.flat().join("")}`;
+  return `${player}:${canonicalizeBoard(board).key}`;
+}
+
+function createTranspositionPosition(board, player) {
+  const canonical = canonicalizeBoard(board);
+  return {
+    key: `${player}:${canonical.key}`,
+    transform: canonical.transform,
+  };
 }
 
 function orderMovesByHeuristic(moves, board, player, model, preferredMove = null) {
@@ -130,7 +143,10 @@ function negamax(
 
   const alphaStart = alpha;
   const betaStart = beta;
-  const boardKey = transpositionTable === null ? null : createBoardKey(board, player);
+  const position = transpositionTable === null
+    ? null
+    : createTranspositionPosition(board, player);
+  const boardKey = position?.key ?? null;
   const cachedEntry = boardKey === null ? null : transpositionTable.get(boardKey);
   const cachedScore = getTranspositionScore(cachedEntry, depth, alpha, beta);
   if (cachedScore !== null) {
@@ -192,13 +208,16 @@ function negamax(
 
   let bestScore = -Infinity;
   let bestMove = null;
+  const preferredMove = cachedEntry?.bestMove
+    ? inverseTransformCoordinate(cachedEntry.bestMove, position.transform)
+    : null;
 
   for (const move of orderMovesByHeuristic(
     moves,
     board,
     player,
     model,
-    cachedEntry?.bestMove,
+    preferredMove,
   )) {
     const score = -negamax(
       move.board,
@@ -232,7 +251,9 @@ function negamax(
     bestScore,
     alphaStart,
     betaStart,
-    bestMove,
+    bestMove === null || position === null
+      ? null
+      : transformCoordinate(bestMove, position.transform),
   );
   return bestScore;
 }

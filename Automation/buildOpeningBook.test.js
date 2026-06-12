@@ -17,9 +17,15 @@ const {
 } = require("./database");
 const {
   buildOpeningBook,
+  rowsToOpeningBook,
   writeOpeningBook,
   writeBrowserOpeningBook,
 } = require("./buildOpeningBook");
+const {
+  canonicalizeBoardKey,
+  transformBoardKey,
+  transformCoordinate,
+} = require("./boardSymmetry");
 
 function createResult(winner) {
   return {
@@ -53,8 +59,10 @@ test("局面ごとの候補手と成績を生成できる", () => {
     maxTurn: 10,
     minSamples: 2,
   });
-  const positionKey = `${BLACK}:${boardToKey(createBoard())}`;
+  const canonical = canonicalizeBoardKey(boardToKey(createBoard()));
+  const positionKey = `${BLACK}:${canonical.key}`;
   const move = openingBook.positions[positionKey][0];
+  const [expectedX, expectedY] = transformCoordinate([2, 3], canonical.transform);
 
   assert.equal(openingBook.metadata.positionCount, 1);
   assert.deepEqual(
@@ -67,8 +75,8 @@ test("局面ごとの候補手と成績を生成できる", () => {
       score: move.score,
     },
     {
-      x: 2,
-      y: 3,
+      x: expectedX,
+      y: expectedY,
       samples: 2,
       wins: 1,
       draws: 1,
@@ -90,6 +98,55 @@ test("最低サンプル数に満たない候補手を除外する", () => {
 
   assert.equal(openingBook.metadata.positionCount, 0);
   database.close();
+});
+
+test("対称局面の定石統計を正規形へ合算する", () => {
+  const boardKey = boardToKey(createBoard());
+  const rotatedKey = transformBoardKey(boardKey, 1);
+  const [rotatedX, rotatedY] = transformCoordinate([2, 3], 1);
+  const positions = rowsToOpeningBook(
+    [
+      {
+        board_key: boardKey,
+        player: BLACK,
+        x: 2,
+        y: 3,
+        samples: 2,
+        wins: 1,
+        draws: 0,
+      },
+      {
+        board_key: rotatedKey,
+        player: BLACK,
+        x: rotatedX,
+        y: rotatedY,
+        samples: 3,
+        wins: 2,
+        draws: 1,
+      },
+    ],
+    { minSamples: 5 },
+  );
+  const canonical = canonicalizeBoardKey(boardKey);
+  const [canonicalX, canonicalY] = transformCoordinate([2, 3], canonical.transform);
+  const move = positions[`${BLACK}:${canonical.key}`][0];
+
+  assert.deepEqual(
+    {
+      x: move.x,
+      y: move.y,
+      samples: move.samples,
+      wins: move.wins,
+      draws: move.draws,
+    },
+    {
+      x: canonicalX,
+      y: canonicalY,
+      samples: 5,
+      wins: 3,
+      draws: 1,
+    },
+  );
 });
 
 test("定石JSONをファイルへ出力できる", () => {
