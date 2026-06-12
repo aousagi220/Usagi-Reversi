@@ -8,6 +8,7 @@ const {
   WHITE,
   createBoard,
   cloneBoard,
+  getValidMoves,
   getOpponent,
 } = require("../Automation/reversiEngine");
 const { createModel } = require("./evaluator");
@@ -250,6 +251,54 @@ test("置換表の有無で選択する手は変わらない", () => {
   );
 });
 
+test("反復深化は指定深さまで探索する", () => {
+  const searchStats = {};
+
+  selectModelMove(createBoard(), BLACK, undefined, () => 0, {
+    searchDepth: 4,
+    useIterativeDeepening: true,
+    searchStats,
+  });
+
+  assert.equal(searchStats.completedDepth, 4);
+  assert.equal(searchStats.iterations, 4);
+  assert.ok(searchStats.cutoffs > 0);
+});
+
+test("反復深化と探索ヒューリスティックの有無で最善手は変わらない", () => {
+  const board = createBoard();
+  const options = { searchDepth: 5 };
+
+  assert.deepEqual(
+    selectModelMove(board, BLACK, undefined, () => 0, {
+      ...options,
+      useIterativeDeepening: true,
+    }),
+    selectModelMove(board, BLACK, undefined, () => 0, {
+      ...options,
+      useIterativeDeepening: false,
+      useSearchHeuristics: false,
+    }),
+  );
+});
+
+test("時間制限探索は完了済みの深さから合法手を返す", () => {
+  const board = createBoard();
+  const searchStats = {};
+  const move = selectModelMove(board, BLACK, undefined, () => 0, {
+    searchDepth: 20,
+    timeLimitMs: 5,
+    searchStats,
+  });
+
+  assert.equal(
+    getValidMoves(board, BLACK).some(([x, y]) => x === move[0] && y === move[1]),
+    true,
+  );
+  assert.equal(searchStats.timedOut, true);
+  assert.ok((searchStats.completedDepth ?? 0) < 20);
+});
+
 test("終盤閾値以下では終局まで完全読みする", () => {
   const board = [
     [WHITE, EMPTY, EMPTY, WHITE, WHITE, WHITE, WHITE, WHITE],
@@ -288,6 +337,29 @@ test("終盤閾値以下では終局まで完全読みする", () => {
   );
 });
 
+test("終盤完全読みは反復を省略して終局深さを探索する", () => {
+  const board = [
+    [WHITE, EMPTY, EMPTY, WHITE, WHITE, WHITE, WHITE, WHITE],
+    [BLACK, BLACK, WHITE, WHITE, WHITE, BLACK, WHITE, WHITE],
+    [BLACK, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE],
+    [BLACK, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE],
+    [BLACK, BLACK, WHITE, WHITE, WHITE, WHITE, BLACK, WHITE],
+    [BLACK, WHITE, WHITE, WHITE, WHITE, BLACK, EMPTY, WHITE],
+    [BLACK, BLACK, WHITE, WHITE, WHITE, WHITE, WHITE, EMPTY],
+    [BLACK, WHITE, EMPTY, BLACK, EMPTY, WHITE, EMPTY, EMPTY],
+  ];
+  const searchStats = {};
+
+  selectModelMove(board, BLACK, undefined, () => 0, {
+    searchDepth: 1,
+    endgameThreshold: 8,
+    searchStats,
+  });
+
+  assert.equal(searchStats.completedDepth, 8);
+  assert.equal(searchStats.iterations, 1);
+});
+
 test("探索深さは1以上の整数のみ許可する", () => {
   const board = createBoard();
 
@@ -311,5 +383,18 @@ test("終盤完全読みの閾値は0から60の整数のみ許可する", () =>
   assert.throws(
     () => selectModelMove(board, BLACK, undefined, undefined, { endgameThreshold: 61 }),
     /endgameThreshold must be an integer between 0 and 60/,
+  );
+});
+
+test("時間制限には正の数だけ指定できる", () => {
+  const board = createBoard();
+
+  assert.throws(
+    () => selectModelMove(board, BLACK, undefined, undefined, { timeLimitMs: 0 }),
+    /timeLimitMs must be a positive number or null/,
+  );
+  assert.throws(
+    () => selectModelMove(board, BLACK, undefined, undefined, { timeLimitMs: Infinity }),
+    /timeLimitMs must be a positive number or null/,
   );
 });

@@ -18,6 +18,7 @@ const TERMINAL_WIN_SCORE = 1_000_000;
 const TRANSPOSITION_EXACT = "exact";
 const TRANSPOSITION_LOWER = "lower";
 const TRANSPOSITION_UPPER = "upper";
+const SEARCH_TIMEOUT = Symbol("search-timeout");
 
 function selectRandomMove(moves, random = Math.random) {
   if (moves.length === 0) return null;
@@ -53,6 +54,15 @@ function validateEndgameThreshold(endgameThreshold) {
   }
 }
 
+function validateTimeLimit(timeLimitMs) {
+  if (
+    timeLimitMs !== null &&
+    (!Number.isFinite(timeLimitMs) || timeLimitMs <= 0)
+  ) {
+    throw new Error("timeLimitMs must be a positive number or null");
+  }
+}
+
 function evaluateTerminalBoard(board, player) {
   const stoneCount = countStones(board);
   const playerStoneCount = player === BLACK ? stoneCount.black : stoneCount.white;
@@ -76,31 +86,80 @@ function createTranspositionPosition(board, player) {
   };
 }
 
-function orderMovesByHeuristic(moves, board, player, model, preferredMove = null) {
+function moveKey(player, x, y) {
+  return `${player}:${x}:${y}`;
+}
+
+function isSameMove(firstMove, secondMove) {
+  return firstMove !== null &&
+    secondMove !== null &&
+    firstMove[0] === secondMove[0] &&
+    firstMove[1] === secondMove[1];
+}
+
+function orderMovesByHeuristic(
+  moves,
+  board,
+  player,
+  model,
+  {
+    preferredMove = null,
+    killerMoves = [],
+    history = null,
+  } = {},
+) {
   const orderedMoves = moves
     .map(([x, y]) => {
       const nextBoard = cloneBoard(board);
       placeStone(nextBoard, x, y, player);
+      const killerIndex = killerMoves.findIndex((killerMove) =>
+        isSameMove(killerMove, [x, y]),
+      );
 
       return {
         x,
         y,
         board: nextBoard,
         heuristicScore: evaluateBoard(nextBoard, player, model),
+        preferred: isSameMove(preferredMove, [x, y]),
+        killerIndex,
+        historyScore: history?.get(moveKey(player, x, y)) ?? 0,
       };
     })
-    .sort((first, second) => second.heuristicScore - first.heuristicScore);
-
-  if (preferredMove !== null) {
-    const preferredIndex = orderedMoves.findIndex(
-      ({ x, y }) => x === preferredMove[0] && y === preferredMove[1],
-    );
-    if (preferredIndex > 0) {
-      orderedMoves.unshift(orderedMoves.splice(preferredIndex, 1)[0]);
-    }
-  }
+    .sort((first, second) => {
+      if (first.preferred !== second.preferred) return first.preferred ? -1 : 1;
+      if (second.heuristicScore !== first.heuristicScore) {
+        return second.heuristicScore - first.heuristicScore;
+      }
+      if (first.killerIndex !== second.killerIndex) {
+        if (first.killerIndex === -1) return 1;
+        if (second.killerIndex === -1) return -1;
+        return first.killerIndex - second.killerIndex;
+      }
+      if (second.historyScore !== first.historyScore) {
+        return second.historyScore - first.historyScore;
+      }
+      return 0;
+    });
 
   return orderedMoves;
+}
+
+function recordCutoff(searchContext, ply, player, move, depth) {
+  if (searchContext === null) return;
+
+  const killers = searchContext.killers.get(ply) ?? [];
+  const cutoffMove = [move.x, move.y];
+  if (!killers.some((killerMove) => isSameMove(killerMove, cutoffMove))) {
+    killers.unshift(cutoffMove);
+    searchContext.killers.set(ply, killers.slice(0, 2));
+  }
+
+  const key = moveKey(player, move.x, move.y);
+  searchContext.history.set(
+    key,
+    (searchContext.history.get(key) ?? 0) + depth * depth,
+  );
 }
 
 function getTranspositionScore(entry, depth, alpha, beta) {
@@ -136,7 +195,16 @@ function negamax(
   model,
   transpositionTable = null,
   searchStats = null,
+  searchContext = null,
+  ply = 0,
 ) {
+  if (
+    searchContext !== null &&
+    searchContext.deadline !== null &&
+    Date.now() >= searchContext.deadline
+  ) {
+    throw SEARCH_TIMEOUT;
+  }
   if (searchStats !== null) {
     searchStats.nodes = (searchStats.nodes ?? 0) + 1;
   }
@@ -194,6 +262,8 @@ function negamax(
       model,
       transpositionTable,
       searchStats,
+      searchContext,
+      ply,
     );
     saveTransposition(
       transpositionTable,
@@ -217,7 +287,11 @@ function negamax(
     board,
     player,
     model,
-    preferredMove,
+    {
+      preferredMove,
+      killerMoves: searchContext?.killers.get(ply) ?? [],
+      history: searchContext?.history ?? null,
+    },
   )) {
     const score = -negamax(
       move.board,
@@ -228,6 +302,8 @@ function negamax(
       model,
       transpositionTable,
       searchStats,
+      searchContext,
+      ply + 1,
     );
 
     if (score > bestScore) {
@@ -240,6 +316,10 @@ function negamax(
     }
 
     if (alpha >= beta) {
+      recordCutoff(searchContext, ply, player, move, depth);
+      if (searchStats !== null) {
+        searchStats.cutoffs = (searchStats.cutoffs ?? 0) + 1;
+      }
       break;
     }
   }
@@ -258,32 +338,23 @@ function negamax(
   return bestScore;
 }
 
-function selectModelMove(
+function searchRoot(
   board,
   player,
-  model = DEFAULT_MODEL,
-  random = Math.random,
-  {
-    searchDepth = 1,
-    endgameThreshold = 0,
-    useTranspositionTable = true,
-    searchStats = null,
-  } = {},
+  model,
+  depth,
+  transpositionTable,
+  searchStats,
+  searchContext,
+  preferredMove = null,
 ) {
-  validateSearchDepth(searchDepth);
-  validateEndgameThreshold(endgameThreshold);
-  validateModel(model);
-
   const validMoves = getValidMoves(board, player);
-  if (validMoves.length === 0) return null;
-
-  const emptyCount = countStones(board).empty;
-  const effectiveSearchDepth = endgameThreshold > 0 && emptyCount <= endgameThreshold
-    ? emptyCount
-    : searchDepth;
-  const orderedMoves = orderMovesByHeuristic(validMoves, board, player, model);
+  const orderedMoves = orderMovesByHeuristic(validMoves, board, player, model, {
+    preferredMove,
+    killerMoves: searchContext?.killers.get(0) ?? [],
+    history: searchContext?.history ?? null,
+  });
   const opponent = getOpponent(player);
-  const transpositionTable = useTranspositionTable ? new Map() : null;
   let bestScore = -Infinity;
   let alpha = -Infinity;
   const bestMoves = [];
@@ -292,26 +363,28 @@ function selectModelMove(
     let score = -negamax(
       move.board,
       opponent,
-      effectiveSearchDepth - 1,
+      depth - 1,
       -Infinity,
       -alpha,
       model,
       transpositionTable,
       searchStats,
+      searchContext,
+      1,
     );
 
-    // A root-window cutoff can only prove that this move is no better than
-    // the current best. Re-search the boundary value to preserve random ties.
     if (score === bestScore && bestMoves.length > 0) {
       score = -negamax(
         move.board,
         opponent,
-        effectiveSearchDepth - 1,
+        depth - 1,
         -Infinity,
         Infinity,
         model,
         transpositionTable,
         searchStats,
+        searchContext,
+        1,
       );
     }
 
@@ -328,11 +401,84 @@ function selectModelMove(
     }
   }
 
-  if (bestMoves.length === 0) {
-    return null;
+  return { bestScore, bestMoves };
+}
+
+function selectModelMove(
+  board,
+  player,
+  model = DEFAULT_MODEL,
+  random = Math.random,
+  {
+    searchDepth = 1,
+    endgameThreshold = 0,
+    useTranspositionTable = true,
+    useIterativeDeepening = false,
+    useSearchHeuristics = true,
+    timeLimitMs = null,
+    searchStats = null,
+  } = {},
+) {
+  validateSearchDepth(searchDepth);
+  validateEndgameThreshold(endgameThreshold);
+  validateTimeLimit(timeLimitMs);
+  validateModel(model);
+
+  const validMoves = getValidMoves(board, player);
+  if (validMoves.length === 0) return null;
+
+  const emptyCount = countStones(board).empty;
+  const isEndgameSearch = endgameThreshold > 0 && emptyCount <= endgameThreshold;
+  const effectiveSearchDepth = isEndgameSearch
+    ? emptyCount
+    : searchDepth;
+  const transpositionTable = useTranspositionTable ? new Map() : null;
+  const shouldIterate = (useIterativeDeepening || timeLimitMs !== null) &&
+    !isEndgameSearch;
+  const searchContext = useSearchHeuristics || timeLimitMs !== null
+    ? {
+        killers: new Map(),
+        history: new Map(),
+        deadline: timeLimitMs === null ? null : Date.now() + timeLimitMs,
+      }
+    : null;
+  const firstDepth = shouldIterate
+    ? 1
+    : effectiveSearchDepth;
+  let result = null;
+  let preferredMove = null;
+
+  for (let depth = firstDepth; depth <= effectiveSearchDepth; depth++) {
+    try {
+      const iterationResult = searchRoot(
+        board,
+        player,
+        model,
+        depth,
+        transpositionTable,
+        searchStats,
+        searchContext,
+        preferredMove,
+      );
+      result = iterationResult;
+      preferredMove = result.bestMoves[0] ?? null;
+      if (searchStats !== null) {
+        searchStats.completedDepth = depth;
+        searchStats.iterations = (searchStats.iterations ?? 0) + 1;
+      }
+    } catch (error) {
+      if (error !== SEARCH_TIMEOUT) throw error;
+      if (searchStats !== null) searchStats.timedOut = true;
+      break;
+    }
   }
 
-  return selectRandomMove(bestMoves, random);
+  if (result === null) {
+    const fallbackMoves = orderMovesByHeuristic(validMoves, board, player, model);
+    return [fallbackMoves[0].x, fallbackMoves[0].y];
+  }
+
+  return selectRandomMove(result.bestMoves, random);
 }
 
 module.exports = {
@@ -342,4 +488,5 @@ module.exports = {
   scoreMoves,
   selectModelMove,
   validateEndgameThreshold,
+  validateTimeLimit,
 };

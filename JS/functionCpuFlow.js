@@ -95,6 +95,16 @@ function playCpuMove(cpuType) {
   if (cpuType === STRONG) {
     return StrongMove(validMoves);
   }
+
+  if (cpuType === TRAINED) {
+    return TrainedModelMove();
+  }
+}
+
+function TrainedModelMove() {
+  const move = selectBrowserModelMove(BOARD, currentPlayer);
+  if (move === null) return;
+  placeStone(move[0], move[1], currentPlayer);
 }
 
 function WeakestMove(validMoves) {

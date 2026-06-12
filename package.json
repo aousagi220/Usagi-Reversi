@@ -16,6 +16,7 @@
     "simulate:many": "node Automation/simulateMany.js",
     "simulate:save": "node Automation/simulateMany.js 100 --save",
     "book:build": "node Automation/buildOpeningBook.js",
+    "model:build": "node Automation/buildBrowserModel.js",
     "ai:evaluate": "node AITraining/trainingSimulator.js",
     "ai:train": "node AITraining/trainer.js",
     "ai:train:resume": "node AITraining/trainer.js --resume",

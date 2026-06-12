@@ -6,6 +6,54 @@
 npm test
 ```
 
+## AutomationのCPU
+
+`Automation/cpuStrategies.js`には、ブラウザUIから独立して実行できる
+3段階のCPUがあります。自動対局、棋譜保存、定石生成、学習モデルの評価相手に
+使用します。
+
+| CPU | 定数 | 手の選び方 |
+|---|---:|---|
+| 弱CPU | `WEAK = 0` | 合法手からランダムに選択 |
+| 普通CPU | `NORMAL = 1` | 最も多く石を返せる手を選択 |
+| 強CPU | `STRONG = 2` | 定石を優先し、反転数・角・辺・Cマス・Xマスを評価 |
+
+Automationの強CPUには次のヒューリスティックがあります。
+
+- 序盤は1石だけ返す手を加点
+- 辺を加点
+- 角を大きく加点
+- 角が空いている間はCマスを減点
+- 角が空いている間はXマスをさらに大きく減点
+- 生成済み定石に該当する場合は、定石の最高評価手を優先
+
+1局だけ実行:
+
+```bash
+npm run simulate
+```
+
+強CPU対普通CPUを100局実行:
+
+```bash
+npm run simulate:many -- 100
+```
+
+棋譜をSQLiteへ保存:
+
+```bash
+npm run simulate:save
+```
+
+保存棋譜から定石を再生成:
+
+```bash
+npm run book:build
+```
+
+`Automation`の強CPUは軽量な1手評価CPUです。後述の学習AIは評価モデルを使って
+相手の応手までαβ探索するため、役割と強さが異なります。
+
 ## モデル評価
 
 既存CPUとの対局を実行します。
@@ -18,6 +66,19 @@ npm run ai:evaluate -- 100 --search-depth=3 --endgame-threshold=10
 - `--search-depth=3`: 通常局面の探索深さ
 - `--endgame-threshold=10`: 空きマスが10以下になったら終局まで完全読み
 - `--endgame-threshold=0`: 終盤完全読みを無効化
+
+## ブラウザで学習AIと対戦
+
+CPU設定から「学習AI」を選ぶと、`AITraining/models/bestModel.json`を元にした
+深さ3探索のモデルCPUと対戦できます。残り8マス以下では終局まで完全読みします。
+
+学習後にブラウザ用モデルを更新する場合:
+
+```bash
+npm run model:build
+```
+
+その後にページを再読み込みしてください。
 
 ## 遺伝的アルゴリズムによる学習
 
@@ -115,6 +176,11 @@ npm run ai:train:resume -- 20 16 40 --search-depth=3 --endgame-threshold=10
 置換表と定石統計を共有し、定石の着手座標は実際の盤面向きへ自動変換されます。
 既存の対局DBはそのまま利用でき、`npm run book:build` の再実行時に対称局面が
 合算されます。
+
+`timeLimitMs` を指定した実戦探索では深さ1から反復深化し、時間切れ時は最後に
+完了した深さの手を返せます。前の反復で得た最善手を次の手順序付けへ利用します。
+αβカットを起こした手はキラームーブと履歴値へ記録しますが、リバーシで有効な
+現行評価順を優先します。固定深度学習と終盤完全読みは余計な反復を行いません。
 
 ## Google Colabでリモート学習
 
