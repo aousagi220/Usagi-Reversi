@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const { STRONG } = require("../Automation/cpuStrategies");
-const { FEATURE_NAMES, DEFAULT_MODEL } = require("./evaluator");
+const { FEATURE_NAMES, PHASE_NAMES, DEFAULT_MODEL, normalizeModel } = require("./evaluator");
 const { createInitialPopulation, evaluatePopulation, createNextGeneration } = require("./geneticAlgorithm");
 const { loadOpeningBook } = require("./trainingSimulator");
 const { DEFAULT_OPPONENT_MIX, simulateMixedMatches } = require("./mixedEvaluation");
@@ -21,7 +21,7 @@ function writeBestModel(rankedModel, generation, outputPath = DEFAULT_BEST_MODEL
         generation,
         fitness: rankedModel.fitness,
         stats: rankedModel.stats,
-        weights: rankedModel.model,
+        weights: normalizeModel(rankedModel.model),
         savedAt: new Date().toISOString(),
       },
       null,
@@ -35,6 +35,7 @@ function train({
   generationCount = 3,
   gamesPerModel = 10,
   searchDepth = 1,
+  endgameThreshold = 0,
   opponentMix = DEFAULT_OPPONENT_MIX,
   random = Math.random,
   openingBook = loadOpeningBook(),
@@ -54,6 +55,10 @@ function train({
     throw new Error("searchDepth must be a positive integer");
   }
 
+  if (!Number.isInteger(endgameThreshold) || endgameThreshold < 0 || endgameThreshold > 60) {
+    throw new Error("endgameThreshold must be an integer between 0 and 60");
+  }
+
   if (!Number.isInteger(startGeneration) || startGeneration <= 0) {
     throw new Error("startGeneration must be a positive integer");
   }
@@ -66,6 +71,7 @@ function train({
         pastModel,
         gameCount: gamesPerModel,
         searchDepth,
+        endgameThreshold,
         opponentMix,
         random,
         openingBook,
@@ -128,22 +134,24 @@ function train({
 }
 
 function printGeneration(result) {
-  const weights = FEATURE_NAMES.map((featureName) => `${featureName}=${result.bestModel[featureName].toFixed(2)}`).join(
-    ", ",
-  );
-
   console.log(
     `世代${result.generation}: best=${result.bestFitness.toFixed(2)} average=${result.averageFitness.toFixed(2)}`,
   );
-  console.log(`  ${weights}`);
+  for (const phaseName of PHASE_NAMES) {
+    const weights = FEATURE_NAMES.map(
+      (featureName) => `${featureName}=${result.bestModel[phaseName][featureName].toFixed(2)}`,
+    ).join(", ");
+    console.log(`  ${phaseName}: ${weights}`);
+  }
 }
 
 function resolveTrainingStart({ shouldResume, storedBest, fileBest, latestGeneration }) {
   const fileBestModel = fileBest
     ? {
+        generation: fileBest.generation,
         fitness: fileBest.fitness,
         stats: fileBest.stats,
-        model: fileBest.weights,
+        model: normalizeModel(fileBest.weights),
       }
     : null;
   const bestKnownModel =
@@ -164,7 +172,7 @@ function resolveTrainingStart({ shouldResume, storedBest, fileBest, latestGenera
 
   if (storedBest) {
     return {
-      baseModel: storedBest.model,
+      baseModel: normalizeModel(storedBest.model),
       previousBest: storedBest,
       startGeneration: latestGeneration + 1,
       source: "database",
@@ -173,7 +181,7 @@ function resolveTrainingStart({ shouldResume, storedBest, fileBest, latestGenera
 
   if (fileBest) {
     return {
-      baseModel: fileBest.weights,
+      baseModel: normalizeModel(fileBest.weights),
       previousBest: fileBestModel,
       startGeneration: fileBest.generation + 1,
       source: "file",
@@ -196,6 +204,10 @@ if (require.main === module) {
   const gamesPerModel = Number(positionalArguments[2] ?? 10);
   const searchDepthArgument = commandArguments.find((argument) => argument.startsWith("--search-depth="));
   const searchDepth = searchDepthArgument ? Number(searchDepthArgument.slice("--search-depth=".length)) : 1;
+  const endgameThresholdArgument = commandArguments.find((argument) => argument.startsWith("--endgame-threshold="));
+  const endgameThreshold = endgameThresholdArgument
+    ? Number(endgameThresholdArgument.slice("--endgame-threshold=".length))
+    : 0;
   const shouldResume = commandArguments.includes("--resume");
 
   const {
@@ -237,6 +249,7 @@ if (require.main === module) {
     console.log("新規学習を世代1から開始します");
   }
   console.log(`探索深さ: ${searchDepth}`);
+  console.log(`終盤完全読み: ${endgameThreshold === 0 ? "無効" : `残り${endgameThreshold}マス以下`}`);
 
   let result;
 
@@ -246,6 +259,7 @@ if (require.main === module) {
       populationSize,
       gamesPerModel,
       searchDepth,
+      endgameThreshold,
       baseModel: trainingStart.baseModel,
       startGeneration: trainingStart.startGeneration,
       previousBest: trainingStart.previousBest,

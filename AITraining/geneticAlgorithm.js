@@ -1,11 +1,29 @@
 const {
   FEATURE_NAMES,
+  PHASE_NAMES,
   DEFAULT_MODEL,
+  normalizeModel,
   validateModel,
 } = require("./evaluator");
 
 function randomBetween(min, max, random = Math.random) {
   return min + (max - min) * random();
+}
+
+function mapModelWeights(model, mapWeight) {
+  const normalizedModel = normalizeModel(model);
+
+  return Object.fromEntries(
+    PHASE_NAMES.map((phaseName) => [
+      phaseName,
+      Object.fromEntries(
+        FEATURE_NAMES.map((featureName) => [
+          featureName,
+          mapWeight(normalizedModel[phaseName][featureName], phaseName, featureName),
+        ]),
+      ),
+    ]),
+  );
 }
 
 function createRandomModel({
@@ -19,34 +37,21 @@ function createRandomModel({
     throw new Error("variationRate must be a non-negative number");
   }
 
-  return Object.fromEntries(
-    FEATURE_NAMES.map((featureName) => {
-      const baseWeight = baseModel[featureName];
-      const variation = Math.max(Math.abs(baseWeight), 1) * variationRate;
-
-      return [
-        featureName,
-        randomBetween(
-          baseWeight - variation,
-          baseWeight + variation,
-          random,
-        ),
-      ];
-    }),
-  );
+  return mapModelWeights(baseModel, (baseWeight) => {
+    const variation = Math.max(Math.abs(baseWeight), 1) * variationRate;
+    return randomBetween(baseWeight - variation, baseWeight + variation, random);
+  });
 }
 
 function crossoverModels(firstParent, secondParent, random = Math.random) {
   validateModel(firstParent);
   validateModel(secondParent);
+  const normalizedSecondParent = normalizeModel(secondParent);
 
-  return Object.fromEntries(
-    FEATURE_NAMES.map((featureName) => [
-      featureName,
-      random() < 0.5
-        ? firstParent[featureName]
-        : secondParent[featureName],
-    ]),
+  return mapModelWeights(firstParent, (firstWeight, phaseName, featureName) =>
+    random() < 0.5
+      ? firstWeight
+      : normalizedSecondParent[phaseName][featureName],
   );
 }
 
@@ -63,28 +68,16 @@ function mutateModel(
   if (mutationRate < 0 || mutationRate > 1) {
     throw new Error("mutationRate must be between 0 and 1");
   }
-
   if (!Number.isFinite(mutationStrength) || mutationStrength < 0) {
     throw new Error("mutationStrength must be a non-negative number");
   }
 
-  return Object.fromEntries(
-    FEATURE_NAMES.map((featureName) => {
-      const weight = model[featureName];
-      if (random() >= mutationRate) {
-        return [featureName, weight];
-      }
+  return mapModelWeights(model, (weight) => {
+    if (random() >= mutationRate) return weight;
 
-      const mutationRange = Math.max(Math.abs(weight), 1) * mutationStrength;
-      const mutation = randomBetween(
-        -mutationRange,
-        mutationRange,
-        random,
-      );
-
-      return [featureName, weight + mutation];
-    }),
-  );
+    const mutationRange = Math.max(Math.abs(weight), 1) * mutationStrength;
+    return weight + randomBetween(-mutationRange, mutationRange, random);
+  });
 }
 
 function createInitialPopulation({
@@ -97,18 +90,10 @@ function createInitialPopulation({
     throw new Error("populationSize must be an integer of at least 2");
   }
 
-  const population = [{ ...baseModel }];
-
+  const population = [normalizeModel(baseModel)];
   while (population.length < populationSize) {
-    population.push(
-      createRandomModel({
-        baseModel,
-        variationRate,
-        random,
-      }),
-    );
+    population.push(createRandomModel({ baseModel, variationRate, random }));
   }
-
   return population;
 }
 
@@ -120,14 +105,15 @@ function evaluatePopulation(population, evaluateModel) {
   return population
     .map((model, index) => {
       validateModel(model);
-      const evaluation = evaluateModel(model, index);
+      const normalizedModel = normalizeModel(model);
+      const evaluation = evaluateModel(normalizedModel, index);
 
       if (!Number.isFinite(evaluation.fitness)) {
         throw new TypeError("fitness must be a finite number");
       }
 
       return {
-        model,
+        model: normalizedModel,
         ...evaluation,
       };
     })
@@ -136,9 +122,7 @@ function evaluatePopulation(population, evaluateModel) {
 
 function selectParent(rankedPopulation, selectionPoolSize, random = Math.random) {
   const poolSize = Math.min(selectionPoolSize, rankedPopulation.length);
-  const parentIndex = Math.floor(random() * poolSize);
-
-  return rankedPopulation[parentIndex].model;
+  return rankedPopulation[Math.floor(random() * poolSize)].model;
 }
 
 function createNextGeneration(
@@ -155,34 +139,22 @@ function createNextGeneration(
   if (rankedPopulation.length === 0) {
     throw new Error("rankedPopulation must not be empty");
   }
-
   if (!Number.isInteger(eliteCount) || eliteCount < 1 || eliteCount > populationSize) {
     throw new Error("eliteCount must be between 1 and populationSize");
   }
 
   const nextGeneration = rankedPopulation
     .slice(0, eliteCount)
-    .map(({ model }) => ({ ...model }));
+    .map(({ model }) => normalizeModel(model));
 
   while (nextGeneration.length < populationSize) {
-    const firstParent = selectParent(
-      rankedPopulation,
-      selectionPoolSize,
+    const child = crossoverModels(
+      selectParent(rankedPopulation, selectionPoolSize, random),
+      selectParent(rankedPopulation, selectionPoolSize, random),
       random,
     );
-    const secondParent = selectParent(
-      rankedPopulation,
-      selectionPoolSize,
-      random,
-    );
-    const child = crossoverModels(firstParent, secondParent, random);
-
     nextGeneration.push(
-      mutateModel(child, {
-        mutationRate,
-        mutationStrength,
-        random,
-      }),
+      mutateModel(child, { mutationRate, mutationStrength, random }),
     );
   }
 

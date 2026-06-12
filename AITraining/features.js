@@ -7,38 +7,37 @@ const {
   countStones,
 } = require("../Automation/reversiEngine");
 
+const DIRECTIONS = [
+  [0, 1],
+  [0, -1],
+  [1, 0],
+  [-1, 0],
+  [1, 1],
+  [1, -1],
+  [-1, 1],
+  [-1, -1],
+];
+
 const CORNER_AREAS = [
   {
     corner: [0, 0],
-    dangerSquares: [
-      [0, 1],
-      [1, 0],
-      [1, 1],
-    ],
+    cSquares: [[0, 1], [1, 0]],
+    xSquare: [1, 1],
   },
   {
     corner: [0, BOARD_SIZE - 1],
-    dangerSquares: [
-      [0, BOARD_SIZE - 2],
-      [1, BOARD_SIZE - 1],
-      [1, BOARD_SIZE - 2],
-    ],
+    cSquares: [[0, BOARD_SIZE - 2], [1, BOARD_SIZE - 1]],
+    xSquare: [1, BOARD_SIZE - 2],
   },
   {
     corner: [BOARD_SIZE - 1, 0],
-    dangerSquares: [
-      [BOARD_SIZE - 2, 0],
-      [BOARD_SIZE - 1, 1],
-      [BOARD_SIZE - 2, 1],
-    ],
+    cSquares: [[BOARD_SIZE - 2, 0], [BOARD_SIZE - 1, 1]],
+    xSquare: [BOARD_SIZE - 2, 1],
   },
   {
     corner: [BOARD_SIZE - 1, BOARD_SIZE - 1],
-    dangerSquares: [
-      [BOARD_SIZE - 2, BOARD_SIZE - 1],
-      [BOARD_SIZE - 1, BOARD_SIZE - 2],
-      [BOARD_SIZE - 2, BOARD_SIZE - 2],
-    ],
+    cSquares: [[BOARD_SIZE - 2, BOARD_SIZE - 1], [BOARD_SIZE - 1, BOARD_SIZE - 2]],
+    xSquare: [BOARD_SIZE - 2, BOARD_SIZE - 2],
   },
 ];
 
@@ -68,17 +67,81 @@ function getEdgeSquares() {
 
 const EDGE_SQUARES = getEdgeSquares();
 
-function countDangerSquares(board, player) {
+function countCornerAdjacentSquares(board, player, squareType) {
   let count = 0;
 
   for (const area of CORNER_AREAS) {
     const [cornerX, cornerY] = area.corner;
     if (board[cornerX][cornerY] !== EMPTY) continue;
 
-    count += countSquares(board, area.dangerSquares, player);
+    const squares = squareType === "c" ? area.cSquares : [area.xSquare];
+    count += countSquares(board, squares, player);
   }
 
   return count;
+}
+
+function countFrontierDiscs(board, player) {
+  let count = 0;
+
+  for (let x = 0; x < BOARD_SIZE; x++) {
+    for (let y = 0; y < BOARD_SIZE; y++) {
+      if (board[x][y] !== player) continue;
+
+      const isFrontier = DIRECTIONS.some(([dx, dy]) => {
+        const nextX = x + dx;
+        const nextY = y + dy;
+        return (
+          nextX >= 0 &&
+          nextX < BOARD_SIZE &&
+          nextY >= 0 &&
+          nextY < BOARD_SIZE &&
+          board[nextX][nextY] === EMPTY
+        );
+      });
+
+      if (isFrontier) count++;
+    }
+  }
+
+  return count;
+}
+
+function addStableEdge(board, stableSquares, player, startX, startY, dx, dy) {
+  let x = startX;
+  let y = startY;
+
+  while (
+    x >= 0 &&
+    x < BOARD_SIZE &&
+    y >= 0 &&
+    y < BOARD_SIZE &&
+    board[x][y] === player
+  ) {
+    stableSquares.add(`${x},${y}`);
+    x += dx;
+    y += dy;
+  }
+}
+
+function countStableDiscs(board, player) {
+  const stableSquares = new Set();
+  const cornerDirections = [
+    [0, 0, [[0, 1], [1, 0]]],
+    [0, BOARD_SIZE - 1, [[0, -1], [1, 0]]],
+    [BOARD_SIZE - 1, 0, [[0, 1], [-1, 0]]],
+    [BOARD_SIZE - 1, BOARD_SIZE - 1, [[0, -1], [-1, 0]]],
+  ];
+
+  for (const [cornerX, cornerY, directions] of cornerDirections) {
+    if (board[cornerX][cornerY] !== player) continue;
+
+    for (const [dx, dy] of directions) {
+      addStableEdge(board, stableSquares, player, cornerX, cornerY, dx, dy);
+    }
+  }
+
+  return stableSquares.size;
 }
 
 function extractFeatures(board, player) {
@@ -98,9 +161,18 @@ function extractFeatures(board, player) {
     edgeDifference:
       countSquares(board, EDGE_SQUARES, player) -
       countSquares(board, EDGE_SQUARES, opponent),
-    dangerSquareDifference:
-      countDangerSquares(board, player) -
-      countDangerSquares(board, opponent),
+    frontierDifference:
+      countFrontierDiscs(board, player) -
+      countFrontierDiscs(board, opponent),
+    cSquareDifference:
+      countCornerAdjacentSquares(board, player, "c") -
+      countCornerAdjacentSquares(board, opponent, "c"),
+    xSquareDifference:
+      countCornerAdjacentSquares(board, player, "x") -
+      countCornerAdjacentSquares(board, opponent, "x"),
+    stableDiscDifference:
+      countStableDiscs(board, player) -
+      countStableDiscs(board, opponent),
   };
 }
 
@@ -109,6 +181,8 @@ module.exports = {
   CORNER_AREAS,
   EDGE_SQUARES,
   countSquares,
-  countDangerSquares,
+  countCornerAdjacentSquares,
+  countFrontierDiscs,
+  countStableDiscs,
   extractFeatures,
 };

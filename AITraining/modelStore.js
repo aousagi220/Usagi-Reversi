@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const { DatabaseSync } = require("node:sqlite");
-const { validateModel } = require("./evaluator");
+const { normalizeModel, validateModel } = require("./evaluator");
 
 const DEFAULT_TRAINING_DATABASE_PATH = path.join(
   __dirname,
@@ -123,11 +123,12 @@ function saveGeneration(
 
     rankedPopulation.forEach((individual, index) => {
       validateModel(individual.model);
+      const normalizedModel = normalizeModel(individual.model);
       insertModel.run(
         generationId,
         index + 1,
         individual.fitness,
-        JSON.stringify(individual.model),
+        JSON.stringify(normalizedModel),
         individual.stats ? JSON.stringify(individual.stats) : null,
       );
     });
@@ -181,7 +182,7 @@ function getBestStoredModel(database) {
   return {
     generation: Number(row.generation),
     fitness: Number(row.fitness),
-    model: JSON.parse(row.weights_json),
+    model: normalizeModel(JSON.parse(row.weights_json)),
     stats: row.stats_json ? JSON.parse(row.stats_json) : null,
   };
 }

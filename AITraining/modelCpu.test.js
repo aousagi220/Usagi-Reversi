@@ -53,7 +53,10 @@ test("角を重視するモデルは角を選ぶ", () => {
     mobilityDifference: 0,
     cornerDifference: 100,
     edgeDifference: 0,
-    dangerSquareDifference: 0,
+    frontierDifference: 0,
+    cSquareDifference: 0,
+    xSquareDifference: 0,
+    stableDiscDifference: 0,
   });
 
   assert.deepEqual(
@@ -69,7 +72,10 @@ test("同点時は乱数に応じた手を選ぶ", () => {
     mobilityDifference: 0,
     cornerDifference: 0,
     edgeDifference: 0,
-    dangerSquareDifference: 0,
+    frontierDifference: 0,
+    cSquareDifference: 0,
+    xSquareDifference: 0,
+    stableDiscDifference: 0,
   });
 
   assert.deepEqual(
@@ -116,7 +122,10 @@ test("パスは探索深さを消費しない", () => {
     mobilityDifference: 0,
     cornerDifference: 0,
     edgeDifference: 0,
-    dangerSquareDifference: 0,
+    frontierDifference: 0,
+    cSquareDifference: 0,
+    xSquareDifference: 0,
+    stableDiscDifference: 0,
   });
 
   const passedScore = negamax(board, WHITE, 1, -Infinity, Infinity, model);
@@ -132,7 +141,10 @@ test("探索深さ1では既存の1手読み評価と同じ候補集合になる
     mobilityDifference: 0,
     cornerDifference: 0,
     edgeDifference: 0,
-    dangerSquareDifference: 0,
+    frontierDifference: 0,
+    cSquareDifference: 0,
+    xSquareDifference: 0,
+    stableDiscDifference: 0,
   });
 
   const scoredMoves = scoreMoves(board, BLACK, model);
@@ -146,6 +158,44 @@ test("探索深さ1では既存の1手読み評価と同じ候補集合になる
   );
 });
 
+test("終盤閾値以下では終局まで完全読みする", () => {
+  const board = [
+    [WHITE, EMPTY, EMPTY, WHITE, WHITE, WHITE, WHITE, WHITE],
+    [BLACK, BLACK, WHITE, WHITE, WHITE, BLACK, WHITE, WHITE],
+    [BLACK, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE],
+    [BLACK, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE],
+    [BLACK, BLACK, WHITE, WHITE, WHITE, WHITE, BLACK, WHITE],
+    [BLACK, WHITE, WHITE, WHITE, WHITE, BLACK, EMPTY, WHITE],
+    [BLACK, BLACK, WHITE, WHITE, WHITE, WHITE, WHITE, EMPTY],
+    [BLACK, WHITE, EMPTY, BLACK, EMPTY, WHITE, EMPTY, EMPTY],
+  ];
+  const model = createModel({
+    stoneDifference: 0,
+    mobilityDifference: 0,
+    cornerDifference: 0,
+    edgeDifference: 0,
+    frontierDifference: 0,
+    cSquareDifference: 0,
+    xSquareDifference: 0,
+    stableDiscDifference: 0,
+  });
+
+  assert.deepEqual(
+    selectModelMove(board, BLACK, model, () => 0, {
+      searchDepth: 1,
+      endgameThreshold: 0,
+    }),
+    [0, 2],
+  );
+  assert.deepEqual(
+    selectModelMove(board, BLACK, model, () => 0, {
+      searchDepth: 1,
+      endgameThreshold: 8,
+    }),
+    [7, 2],
+  );
+});
+
 test("探索深さは1以上の整数のみ許可する", () => {
   const board = createBoard();
 
@@ -156,5 +206,18 @@ test("探索深さは1以上の整数のみ許可する", () => {
   assert.throws(
     () => selectModelMove(board, BLACK, undefined, undefined, { searchDepth: 1.5 }),
     /searchDepth must be an integer of at least 1/,
+  );
+});
+
+test("終盤完全読みの閾値は0から60の整数のみ許可する", () => {
+  const board = createBoard();
+
+  assert.throws(
+    () => selectModelMove(board, BLACK, undefined, undefined, { endgameThreshold: -1 }),
+    /endgameThreshold must be an integer between 0 and 60/,
+  );
+  assert.throws(
+    () => selectModelMove(board, BLACK, undefined, undefined, { endgameThreshold: 61 }),
+    /endgameThreshold must be an integer between 0 and 60/,
   );
 });

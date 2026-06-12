@@ -28,7 +28,7 @@ test("複数世代を更新して最良モデルを保存する", () => {
     outputPath,
     startGeneration: 10,
     evaluateModel: (model) => ({
-      fitness: model.cornerDifference,
+      fitness: model.opening.cornerDifference,
       stats: {
         modelWinRate: 0,
         drawRate: 0,
@@ -86,7 +86,9 @@ test("再開指定時はDBの続きから開始する", () => {
 
   assert.equal(result.startGeneration, 15);
   assert.equal(result.source, "database");
-  assert.deepEqual(result.baseModel, storedBest.model);
+  assert.equal(result.baseModel.opening.cSquareDifference, -5);
+  assert.equal(result.baseModel.midgame.xSquareDifference, -5);
+  assert.equal(result.baseModel.endgame.cSquareDifference, -5);
 });
 
 test("探索深さには正の整数だけ指定できる", () => {
@@ -103,5 +105,22 @@ test("探索深さには正の整数だけ指定できる", () => {
         searchDepth: 1.5,
       }),
     /searchDepth must be a positive integer/,
+  );
+});
+
+test("終盤完全読みの閾値は0から60の整数のみ指定できる", () => {
+  assert.throws(
+    () =>
+      train({
+        endgameThreshold: -1,
+      }),
+    /endgameThreshold must be an integer between 0 and 60/,
+  );
+  assert.throws(
+    () =>
+      train({
+        endgameThreshold: 61,
+      }),
+    /endgameThreshold must be an integer between 0 and 60/,
   );
 });

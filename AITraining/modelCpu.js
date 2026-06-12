@@ -39,6 +39,12 @@ function validateSearchDepth(searchDepth) {
   }
 }
 
+function validateEndgameThreshold(endgameThreshold) {
+  if (!Number.isInteger(endgameThreshold) || endgameThreshold < 0 || endgameThreshold > 60) {
+    throw new Error("endgameThreshold must be an integer between 0 and 60");
+  }
+}
+
 function evaluateTerminalBoard(board, player) {
   const stoneCount = countStones(board);
   const playerStoneCount = player === BLACK ? stoneCount.black : stoneCount.white;
@@ -102,13 +108,24 @@ function negamax(board, player, depth, alpha, beta, model) {
   return bestScore;
 }
 
-function selectModelMove(board, player, model = DEFAULT_MODEL, random = Math.random, { searchDepth = 1 } = {}) {
+function selectModelMove(
+  board,
+  player,
+  model = DEFAULT_MODEL,
+  random = Math.random,
+  { searchDepth = 1, endgameThreshold = 0 } = {},
+) {
   validateSearchDepth(searchDepth);
+  validateEndgameThreshold(endgameThreshold);
   validateModel(model);
 
   const validMoves = getValidMoves(board, player);
   if (validMoves.length === 0) return null;
 
+  const emptyCount = countStones(board).empty;
+  const effectiveSearchDepth = endgameThreshold > 0 && emptyCount <= endgameThreshold
+    ? emptyCount
+    : searchDepth;
   const orderedMoves = orderMovesByHeuristic(validMoves, board, player, model);
   const opponent = getOpponent(player);
   let bestScore = -Infinity;
@@ -116,12 +133,12 @@ function selectModelMove(board, player, model = DEFAULT_MODEL, random = Math.ran
   const bestMoves = [];
 
   for (const move of orderedMoves) {
-    let score = -negamax(move.board, opponent, searchDepth - 1, -Infinity, -alpha, model);
+    let score = -negamax(move.board, opponent, effectiveSearchDepth - 1, -Infinity, -alpha, model);
 
     // A root-window cutoff can only prove that this move is no better than
     // the current best. Re-search the boundary value to preserve random ties.
     if (score === bestScore && bestMoves.length > 0) {
-      score = -negamax(move.board, opponent, searchDepth - 1, -Infinity, Infinity, model);
+      score = -negamax(move.board, opponent, effectiveSearchDepth - 1, -Infinity, Infinity, model);
     }
 
     if (score > bestScore) {
@@ -149,4 +166,5 @@ module.exports = {
   negamax,
   scoreMoves,
   selectModelMove,
+  validateEndgameThreshold,
 };

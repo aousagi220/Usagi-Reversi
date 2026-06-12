@@ -12,7 +12,7 @@ const {
 const { WEAK, NORMAL, STRONG, selectCpuMove } = require("../Automation/cpuStrategies");
 const { getWinner } = require("../Automation/simulate");
 const { DEFAULT_MODEL, validateModel } = require("./evaluator");
-const { selectModelMove } = require("./modelCpu");
+const { selectModelMove, validateEndgameThreshold } = require("./modelCpu");
 
 const CPU_NAMES = {
   [WEAK]: "弱CPU",
@@ -33,9 +33,11 @@ function simulateGame({
   random = Math.random,
   opponentDetails = {},
   searchDepth = 1,
+  endgameThreshold = 0,
 }) {
   validateModel(model);
   validateSearchDepth(searchDepth);
+  validateEndgameThreshold(endgameThreshold);
 
   if (modelColor !== BLACK && modelColor !== WHITE) {
     throw new Error("modelColor must be BLACK or WHITE");
@@ -49,7 +51,7 @@ function simulateGame({
   while (!isGameEnd(board)) {
     const isModelTurn = currentPlayer === modelColor;
     const move = isModelTurn
-      ? selectModelMove(board, currentPlayer, model, random, { searchDepth })
+      ? selectModelMove(board, currentPlayer, model, random, { searchDepth, endgameThreshold })
       : selectOpponentMove(board, currentPlayer);
 
     if (move === null) {
@@ -103,6 +105,7 @@ function simulateModelGame({
   random = Math.random,
   openingBook = null,
   searchDepth = 1,
+  endgameThreshold = 0,
 } = {}) {
   return simulateGame({
     model,
@@ -111,6 +114,7 @@ function simulateModelGame({
     random,
     opponentDetails: { opponentCpu },
     searchDepth,
+    endgameThreshold,
   });
 }
 
@@ -120,17 +124,21 @@ function simulateModelsGame({
   modelColor = BLACK,
   random = Math.random,
   searchDepth = 1,
+  endgameThreshold = 0,
 } = {}) {
   validateModel(opponentModel);
   validateSearchDepth(searchDepth);
+  validateEndgameThreshold(endgameThreshold);
 
   return simulateGame({
     model,
     modelColor,
-    selectOpponentMove: (board, player) => selectModelMove(board, player, opponentModel, random, { searchDepth }),
+    selectOpponentMove: (board, player) =>
+      selectModelMove(board, player, opponentModel, random, { searchDepth, endgameThreshold }),
     random,
     opponentDetails: { opponentType: "model" },
     searchDepth,
+    endgameThreshold,
   });
 }
 
@@ -196,9 +204,11 @@ function simulateModelMatches({
   random = Math.random,
   openingBook = null,
   searchDepth = 1,
+  endgameThreshold = 0,
 } = {}) {
   validateModel(model);
   validateSearchDepth(searchDepth);
+  validateEndgameThreshold(endgameThreshold);
 
   if (!Number.isInteger(gameCount) || gameCount <= 0) {
     throw new Error("gameCount must be a positive integer");
@@ -215,6 +225,7 @@ function simulateModelMatches({
       random,
       openingBook,
       searchDepth,
+      endgameThreshold,
     });
 
     addGameResult(stats, result);
@@ -230,10 +241,12 @@ function simulateModelsMatches({
   startModelColor = BLACK,
   random = Math.random,
   searchDepth = 1,
+  endgameThreshold = 0,
 } = {}) {
   validateModel(model);
   validateModel(opponentModel);
   validateSearchDepth(searchDepth);
+  validateEndgameThreshold(endgameThreshold);
 
   if (!Number.isInteger(gameCount) || gameCount <= 0) {
     throw new Error("gameCount must be a positive integer");
@@ -249,6 +262,7 @@ function simulateModelsMatches({
       modelColor,
       random,
       searchDepth,
+      endgameThreshold,
     });
     addGameResult(stats, result);
   }
@@ -284,10 +298,15 @@ if (require.main === module) {
   const gameCount = Number(positionalArguments[0] ?? 100);
   const searchDepthArgument = commandArguments.find((argument) => argument.startsWith("--search-depth="));
   const searchDepth = searchDepthArgument ? Number(searchDepthArgument.slice("--search-depth=".length)) : 1;
+  const endgameThresholdArgument = commandArguments.find((argument) => argument.startsWith("--endgame-threshold="));
+  const endgameThreshold = endgameThresholdArgument
+    ? Number(endgameThresholdArgument.slice("--endgame-threshold=".length))
+    : 0;
   const stats = simulateModelMatches({
     gameCount,
     openingBook: loadOpeningBook(),
     searchDepth,
+    endgameThreshold,
   });
 
   printTrainingStats(stats);

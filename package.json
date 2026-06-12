@@ -18,6 +18,7 @@
     "book:build": "node Automation/buildOpeningBook.js",
     "ai:evaluate": "node AITraining/trainingSimulator.js",
     "ai:train": "node AITraining/trainer.js",
-    "ai:train:resume": "node AITraining/trainer.js --resume"
+    "ai:train:resume": "node AITraining/trainer.js --resume",
+    "ai:remote:server": "node AITraining/remoteTrainingServer.js"
   }
 }

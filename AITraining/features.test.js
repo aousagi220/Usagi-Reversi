@@ -11,7 +11,9 @@ const {
 } = require("../Automation/reversiEngine");
 const {
   EDGE_SQUARES,
-  countDangerSquares,
+  countCornerAdjacentSquares,
+  countFrontierDiscs,
+  countStableDiscs,
   extractFeatures,
 } = require("./features");
 
@@ -30,7 +32,10 @@ test("初期盤面の特徴量は両者とも同じになる", () => {
     mobilityDifference: 0,
     cornerDifference: 0,
     edgeDifference: 0,
-    dangerSquareDifference: 0,
+    frontierDifference: 0,
+    cSquareDifference: 0,
+    xSquareDifference: 0,
+    stableDiscDifference: 0,
   });
 });
 
@@ -59,18 +64,44 @@ test("角と辺を別々に数える", () => {
   assert.equal(EDGE_SQUARES.some(([x, y]) => x === 0 && y === 0), false);
 });
 
-test("空いている角の周辺だけを危険マスとして数える", () => {
+test("空いている角のCマスとXマスを別々に数える", () => {
   const board = createEmptyBoard();
   board[1][1] = BLACK;
   board[0][6] = WHITE;
 
-  assert.equal(countDangerSquares(board, BLACK), 1);
-  assert.equal(countDangerSquares(board, WHITE), 1);
+  assert.equal(countCornerAdjacentSquares(board, BLACK, "c"), 0);
+  assert.equal(countCornerAdjacentSquares(board, BLACK, "x"), 1);
+  assert.equal(countCornerAdjacentSquares(board, WHITE, "c"), 1);
+  assert.equal(countCornerAdjacentSquares(board, WHITE, "x"), 0);
 
   board[0][0] = WHITE;
 
-  assert.equal(countDangerSquares(board, BLACK), 0);
-  assert.equal(countDangerSquares(board, WHITE), 1);
+  assert.equal(countCornerAdjacentSquares(board, BLACK, "x"), 0);
+  assert.equal(countCornerAdjacentSquares(board, WHITE, "c"), 1);
+});
+
+test("空マスに隣接する石をフロンティア石として数える", () => {
+  const board = createEmptyBoard();
+  board[3][3] = BLACK;
+  board[0][0] = WHITE;
+  board[0][1] = WHITE;
+  board[1][0] = WHITE;
+  board[1][1] = WHITE;
+
+  assert.equal(countFrontierDiscs(board, BLACK), 1);
+  assert.equal(countFrontierDiscs(board, WHITE), 3);
+});
+
+test("角から連続する辺の石を確定石として数える", () => {
+  const board = createEmptyBoard();
+  board[0][0] = BLACK;
+  board[0][1] = BLACK;
+  board[0][2] = BLACK;
+  board[1][0] = BLACK;
+  board[2][0] = WHITE;
+
+  assert.equal(countStableDiscs(board, BLACK), 4);
+  assert.equal(countStableDiscs(board, WHITE), 0);
 });
 
 test("合法手数の差を取得できる", () => {

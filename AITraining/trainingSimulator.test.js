@@ -97,3 +97,14 @@ test("探索深さには正の整数だけ指定できる", () => {
   assert.throws(() => simulateModelGame({ searchDepth: 0 }), /searchDepth must be a positive integer/);
   assert.throws(() => simulateModelsMatches({ searchDepth: 1.5 }), /searchDepth must be a positive integer/);
 });
+
+test("終盤完全読みの閾値は0から60の整数のみ指定できる", () => {
+  assert.throws(
+    () => simulateModelGame({ endgameThreshold: -1 }),
+    /endgameThreshold must be an integer between 0 and 60/,
+  );
+  assert.throws(
+    () => simulateModelsMatches({ endgameThreshold: 61 }),
+    /endgameThreshold must be an integer between 0 and 60/,
+  );
+});

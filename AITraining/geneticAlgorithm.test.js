@@ -3,7 +3,9 @@ const assert = require("node:assert/strict");
 
 const {
   FEATURE_NAMES,
+  PHASE_NAMES,
   DEFAULT_MODEL,
+  createModel,
 } = require("./evaluator");
 const {
   createRandomModel,
@@ -14,36 +16,36 @@ const {
   createNextGeneration,
 } = require("./geneticAlgorithm");
 
+function createUniformModel(value) {
+  return createModel(Object.fromEntries(
+    PHASE_NAMES.map((phaseName) => [
+      phaseName,
+      Object.fromEntries(FEATURE_NAMES.map((featureName) => [featureName, value])),
+    ]),
+  ));
+}
+
 test("基準モデルの周辺にランダム個体を生成する", () => {
   const model = createRandomModel({
     variationRate: 0.5,
     random: () => 1,
   });
 
-  for (const featureName of FEATURE_NAMES) {
-    const baseWeight = DEFAULT_MODEL[featureName];
-    const variation = Math.max(Math.abs(baseWeight), 1) * 0.5;
-
-    assert.equal(model[featureName], baseWeight + variation);
+  for (const phaseName of PHASE_NAMES) {
+    for (const featureName of FEATURE_NAMES) {
+      const baseWeight = DEFAULT_MODEL[phaseName][featureName];
+      const variation = Math.max(Math.abs(baseWeight), 1) * 0.5;
+      assert.equal(model[phaseName][featureName], baseWeight + variation);
+    }
   }
 });
 
-test("両親の重みを交叉して子を作る", () => {
-  const firstParent = Object.fromEntries(
-    FEATURE_NAMES.map((featureName) => [featureName, 1]),
-  );
-  const secondParent = Object.fromEntries(
-    FEATURE_NAMES.map((featureName) => [featureName, 2]),
-  );
+test("両親の段階別重みを交叉して子を作る", () => {
+  const firstParent = createUniformModel(1);
+  const secondParent = createUniformModel(2);
 
-  assert.deepEqual(
-    crossoverModels(firstParent, secondParent, () => 0),
-    firstParent,
-  );
-  assert.deepEqual(
-    crossoverModels(firstParent, secondParent, () => 1),
-    secondParent,
-  );
+  assert.deepEqual(crossoverModels(firstParent, secondParent, () => 0), firstParent);
+  assert.deepEqual(crossoverModels(firstParent, secondParent, () => 1), secondParent);
 });
 
 test("突然変異率0ならモデルを変更しない", () => {
@@ -68,30 +70,23 @@ test("初期集団の先頭には基準モデルを残す", () => {
 });
 
 test("適応度の高い順に個体を並べる", () => {
-  const population = [
-    { ...DEFAULT_MODEL, stoneDifference: 1 },
-    { ...DEFAULT_MODEL, stoneDifference: 3 },
-    { ...DEFAULT_MODEL, stoneDifference: 2 },
-  ];
+  const population = [1, 3, 2].map((value) =>
+    createModel({ opening: { stoneDifference: value } }),
+  );
   const ranked = evaluatePopulation(population, (model) => ({
-    fitness: model.stoneDifference,
+    fitness: model.opening.stoneDifference,
   }));
 
-  assert.deepEqual(
-    ranked.map(({ fitness }) => fitness),
-    [3, 2, 1],
-  );
+  assert.deepEqual(ranked.map(({ fitness }) => fitness), [3, 2, 1]);
 });
 
 test("エリートを保ったまま次世代を生成する", () => {
   const rankedPopulation = evaluatePopulation(
-    [
-      { ...DEFAULT_MODEL, stoneDifference: 3 },
-      { ...DEFAULT_MODEL, stoneDifference: 2 },
-      { ...DEFAULT_MODEL, stoneDifference: 1 },
-    ],
+    [3, 2, 1].map((value) =>
+      createModel({ opening: { stoneDifference: value } }),
+    ),
     (model) => ({
-      fitness: model.stoneDifference,
+      fitness: model.opening.stoneDifference,
     }),
   );
   const nextGeneration = createNextGeneration(rankedPopulation, {

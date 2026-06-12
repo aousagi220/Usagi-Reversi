@@ -95,6 +95,7 @@ function simulateMixedMatches({
   random = Math.random,
   openingBook = null,
   searchDepth = 1,
+  endgameThreshold = 0,
 } = {}) {
   validateModel(model);
   validateModel(pastModel);
@@ -121,6 +122,7 @@ function simulateMixedMatches({
       random,
       openingBook,
       searchDepth,
+      endgameThreshold,
     });
     scheduledGames += allocatedGames;
   }
@@ -134,6 +136,7 @@ function simulateMixedMatches({
       startModelColor,
       random,
       searchDepth,
+      endgameThreshold,
     });
   }
 

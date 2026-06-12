@@ -5,3 +5,5 @@ AITraining/data/*.db
 AITraining/data/*.db-shm
 AITraining/data/*.db-wal
 AITraining/models/history/
+__pycache__/
+*.pyc
