@@ -1,6 +1,11 @@
-const MODEL_CPU_SEARCH_DEPTH = 3;
+const MODEL_CPU_MAX_SEARCH_DEPTH = 8;
+const MODEL_CPU_TIME_LIMIT_MS = 350;
 const MODEL_CPU_ENDGAME_THRESHOLD = 8;
 const MODEL_CPU_WIN_SCORE = 1000000;
+const MODEL_CPU_TT_EXACT = "exact";
+const MODEL_CPU_TT_LOWER = "lower";
+const MODEL_CPU_TT_UPPER = "upper";
+const MODEL_CPU_TIMEOUT = Symbol("model-cpu-timeout");
 const MODEL_FEATURE_NAMES = [
   "stoneDifference",
   "mobilityDifference",
@@ -19,6 +24,51 @@ function cloneModelBoard(board) {
 
 function getModelOpponent(player) {
   return player === BLACK ? WHITE : BLACK;
+}
+
+function transformModelCoordinate([x, y], transform) {
+  const last = BOARD_SIZE - 1;
+  switch (transform) {
+    case 0: return [x, y];
+    case 1: return [y, last - x];
+    case 2: return [last - x, last - y];
+    case 3: return [last - y, x];
+    case 4: return [x, last - y];
+    case 5: return [last - x, y];
+    case 6: return [y, x];
+    case 7: return [last - y, last - x];
+    default: throw new Error("transform must be between 0 and 7");
+  }
+}
+
+function inverseModelCoordinate(coordinate, transform) {
+  const inverseTransforms = [0, 3, 2, 1, 4, 5, 6, 7];
+  return transformModelCoordinate(coordinate, inverseTransforms[transform]);
+}
+
+function canonicalizeModelBoard(board, player) {
+  const boardKey = board.flat().join("");
+  let canonicalKey = null;
+  let canonicalTransform = 0;
+
+  for (let transform = 0; transform < 8; transform++) {
+    const transformed = Array(boardKey.length);
+    for (let x = 0; x < BOARD_SIZE; x++) {
+      for (let y = 0; y < BOARD_SIZE; y++) {
+        const [nextX, nextY] = transformModelCoordinate([x, y], transform);
+        transformed[nextX * BOARD_SIZE + nextY] = board[x][y];
+      }
+    }
+    const candidateKey = transformed.join("");
+    if (canonicalKey === null || candidateKey < canonicalKey) {
+      canonicalKey = candidateKey;
+      canonicalTransform = transform;
+    }
+  }
+  return {
+    key: `${player}:${canonicalKey}`,
+    transform: canonicalTransform,
+  };
 }
 
 function getModelFlips(board, x, y, player) {
@@ -217,59 +267,268 @@ function evaluateBrowserTerminal(board, player) {
   return 0;
 }
 
-function browserModelNegamax(board, player, depth, alpha, beta) {
+function getBrowserTranspositionScore(entry, depth, alpha, beta) {
+  if (!entry || entry.depth < depth) return null;
+  if (entry.flag === MODEL_CPU_TT_EXACT) return entry.score;
+  if (entry.flag === MODEL_CPU_TT_LOWER && entry.score >= beta) return entry.score;
+  if (entry.flag === MODEL_CPU_TT_UPPER && entry.score <= alpha) return entry.score;
+  return null;
+}
+
+function saveBrowserTransposition(
+  table,
+  position,
+  depth,
+  score,
+  alpha,
+  beta,
+  bestMove,
+) {
+  let flag = MODEL_CPU_TT_EXACT;
+  if (score <= alpha) flag = MODEL_CPU_TT_UPPER;
+  else if (score >= beta) flag = MODEL_CPU_TT_LOWER;
+
+  const current = table.get(position.key);
+  if (!current || current.depth <= depth) {
+    table.set(position.key, {
+      depth,
+      score,
+      flag,
+      bestMove: bestMove === null
+        ? null
+        : transformModelCoordinate(bestMove, position.transform),
+    });
+  }
+}
+
+function browserModelNegamax(
+  board,
+  player,
+  depth,
+  alpha,
+  beta,
+  searchContext,
+) {
+  if (searchContext.now() >= searchContext.deadline) throw MODEL_CPU_TIMEOUT;
+  searchContext.stats.nodes++;
+  const alphaStart = alpha;
+  const betaStart = beta;
+  const position = canonicalizeModelBoard(board, player);
+  const cached = searchContext.table.get(position.key);
+  const cachedScore = getBrowserTranspositionScore(cached, depth, alpha, beta);
+  if (cachedScore !== null) {
+    searchContext.stats.cacheHits++;
+    return cachedScore;
+  }
+
   const moves = getModelValidMoves(board, player);
   const opponent = getModelOpponent(player);
   if (moves.length === 0 && getModelValidMoves(board, opponent).length === 0) {
-    return evaluateBrowserTerminal(board, player);
+    const score = evaluateBrowserTerminal(board, player);
+    saveBrowserTransposition(
+      searchContext.table,
+      position,
+      depth,
+      score,
+      alphaStart,
+      betaStart,
+      null,
+    );
+    return score;
   }
-  if (depth === 0) return evaluateBrowserModel(board, player);
+  if (depth === 0) {
+    const score = evaluateBrowserModel(board, player);
+    saveBrowserTransposition(
+      searchContext.table,
+      position,
+      depth,
+      score,
+      alphaStart,
+      betaStart,
+      null,
+    );
+    return score;
+  }
   if (moves.length === 0) {
-    return -browserModelNegamax(board, opponent, depth, -beta, -alpha);
+    const score = -browserModelNegamax(
+      board,
+      opponent,
+      depth,
+      -beta,
+      -alpha,
+      searchContext,
+    );
+    saveBrowserTransposition(
+      searchContext.table,
+      position,
+      depth,
+      score,
+      alphaStart,
+      betaStart,
+      null,
+    );
+    return score;
   }
 
+  const preferredMove = cached?.bestMove
+    ? inverseModelCoordinate(cached.bestMove, position.transform)
+    : null;
   const orderedMoves = moves
     .map(([x, y]) => {
       const nextBoard = applyModelMove(board, x, y, player);
-      return { x, y, board: nextBoard, score: evaluateBrowserModel(nextBoard, player) };
+      return {
+        x,
+        y,
+        board: nextBoard,
+        score: evaluateBrowserModel(nextBoard, player),
+        preferred:
+          preferredMove !== null &&
+          preferredMove[0] === x &&
+          preferredMove[1] === y,
+      };
     })
-    .sort((first, second) => second.score - first.score);
+    .sort((first, second) =>
+      Number(second.preferred) - Number(first.preferred) ||
+      second.score - first.score,
+    );
   let best = -Infinity;
+  let bestMove = null;
   for (const move of orderedMoves) {
-    const score = -browserModelNegamax(move.board, opponent, depth - 1, -beta, -alpha);
-    best = Math.max(best, score);
+    const score = -browserModelNegamax(
+      move.board,
+      opponent,
+      depth - 1,
+      -beta,
+      -alpha,
+      searchContext,
+    );
+    if (score > best) {
+      best = score;
+      bestMove = [move.x, move.y];
+    }
     alpha = Math.max(alpha, score);
-    if (alpha >= beta) break;
+    if (alpha >= beta) {
+      searchContext.stats.cutoffs++;
+      break;
+    }
   }
+  saveBrowserTransposition(
+    searchContext.table,
+    position,
+    depth,
+    best,
+    alphaStart,
+    betaStart,
+    bestMove,
+  );
   return best;
 }
 
-function selectBrowserModelMove(board, player) {
+function searchBrowserModelRoot(board, player, depth, searchContext, preferredMove) {
   const moves = getModelValidMoves(board, player);
-  if (moves.length === 0) return null;
-  const emptyCount = countModelBoard(board).empty;
-  const depth = emptyCount <= MODEL_CPU_ENDGAME_THRESHOLD
-    ? emptyCount
-    : MODEL_CPU_SEARCH_DEPTH;
+  const orderedMoves = moves
+    .map(([x, y]) => {
+      const nextBoard = applyModelMove(board, x, y, player);
+      return {
+        x,
+        y,
+        board: nextBoard,
+        score: evaluateBrowserModel(nextBoard, player),
+        preferred:
+          preferredMove !== null &&
+          preferredMove[0] === x &&
+          preferredMove[1] === y,
+      };
+    })
+    .sort((first, second) =>
+      Number(second.preferred) - Number(first.preferred) ||
+      second.score - first.score,
+    );
   let bestScore = -Infinity;
   const bestMoves = [];
 
-  for (const [x, y] of moves) {
-    const nextBoard = applyModelMove(board, x, y, player);
+  for (const move of orderedMoves) {
     const score = -browserModelNegamax(
-      nextBoard,
+      move.board,
       getModelOpponent(player),
       depth - 1,
       -Infinity,
       Infinity,
+      searchContext,
     );
     if (score > bestScore) {
       bestScore = score;
       bestMoves.length = 0;
-      bestMoves.push([x, y]);
+      bestMoves.push([move.x, move.y]);
     } else if (score === bestScore) {
-      bestMoves.push([x, y]);
+      bestMoves.push([move.x, move.y]);
     }
   }
-  return bestMoves[Math.floor(Math.random() * bestMoves.length)];
+  return { bestScore, bestMoves };
+}
+
+function selectBrowserModelMove(
+  board,
+  player,
+  {
+    maxDepth = MODEL_CPU_MAX_SEARCH_DEPTH,
+    timeLimitMs = MODEL_CPU_TIME_LIMIT_MS,
+    random = Math.random,
+    now = Date.now,
+    stats = null,
+  } = {},
+) {
+  const moves = getModelValidMoves(board, player);
+  if (moves.length === 0) return null;
+  const emptyCount = countModelBoard(board).empty;
+  const targetDepth = emptyCount <= MODEL_CPU_ENDGAME_THRESHOLD
+    ? emptyCount
+    : Math.min(maxDepth, emptyCount);
+  const searchStats = stats ?? {};
+  searchStats.nodes = 0;
+  searchStats.cacheHits = 0;
+  searchStats.cutoffs = 0;
+  searchStats.iterations = 0;
+  const searchContext = {
+    table: new Map(),
+    deadline: now() + timeLimitMs,
+    now,
+    stats: searchStats,
+  };
+  let completedResult = null;
+  let preferredMove = null;
+
+  for (let depth = 1; depth <= targetDepth; depth++) {
+    try {
+      const result = searchBrowserModelRoot(
+        board,
+        player,
+        depth,
+        searchContext,
+        preferredMove,
+      );
+      completedResult = result;
+      preferredMove = result.bestMoves[0] ?? null;
+      searchStats.completedDepth = depth;
+      searchStats.iterations++;
+    } catch (error) {
+      if (error !== MODEL_CPU_TIMEOUT) throw error;
+      searchStats.timedOut = true;
+      break;
+    }
+  }
+
+  if (completedResult === null) {
+    const fallbackMoves = moves
+      .map(([x, y]) => ({
+        x,
+        y,
+        score: evaluateBrowserModel(applyModelMove(board, x, y, player), player),
+      }))
+      .sort((first, second) => second.score - first.score);
+    return [fallbackMoves[0].x, fallbackMoves[0].y];
+  }
+  return completedResult.bestMoves[
+    Math.floor(random() * completedResult.bestMoves.length)
+  ];
 }

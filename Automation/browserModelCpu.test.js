@@ -45,9 +45,16 @@ test("ブラウザ版学習AIが初期盤面から合法手を選ぶ", () => {
   const result = vm.runInContext(
     `
       (() => {
-        const move = selectBrowserModelMove(BOARD, BLACK);
+        const stats = {};
+        const move = selectBrowserModelMove(BOARD, BLACK, {
+          maxDepth: 4,
+          timeLimitMs: 1000,
+          random: () => 0,
+          stats,
+        });
         return {
           move,
+          stats,
           legal: getModelValidMoves(BOARD, BLACK)
             .some(([x, y]) => x === move[0] && y === move[1]),
         };
@@ -57,6 +64,39 @@ test("ブラウザ版学習AIが初期盤面から合法手を選ぶ", () => {
   );
 
   assert.equal(result.legal, true);
+  assert.equal(result.stats.completedDepth, 4);
+  assert.ok(result.stats.cacheHits > 0);
+  assert.equal(result.stats.iterations, 4);
+});
+
+test("ブラウザ版学習AIは時間切れでも合法手を返す", () => {
+  const context = createBrowserContext();
+  const result = vm.runInContext(
+    `
+      (() => {
+        let clock = 0;
+        const stats = {};
+        const move = selectBrowserModelMove(BOARD, BLACK, {
+          maxDepth: 20,
+          timeLimitMs: 5,
+          random: () => 0,
+          now: () => clock++,
+          stats,
+        });
+        return {
+          move,
+          stats,
+          legal: getModelValidMoves(BOARD, BLACK)
+            .some(([x, y]) => x === move[0] && y === move[1]),
+        };
+      })()
+    `,
+    context,
+  );
+
+  assert.equal(result.legal, true);
+  assert.equal(result.stats.timedOut, true);
+  assert.ok((result.stats.completedDepth ?? 0) < 20);
 });
 
 test("HTMLはモデルデータと探索処理をCPUフローより先に読み込む", () => {
